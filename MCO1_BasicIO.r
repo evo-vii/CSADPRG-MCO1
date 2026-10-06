@@ -21,7 +21,7 @@ cat("[6] Show Interest Amount\n")
 choice <- as.numeric(readline(prompt = "Choice: "))
 cat("\n***\nChoice = ", choice, "\n\n")
 
-switch(choice,
+switch(as.character(choice),
     "1" = {
         cat("Register Account Name\n")
         account_name <- readline(prompt = "Account Name: ")
