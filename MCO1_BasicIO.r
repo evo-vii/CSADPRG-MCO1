@@ -4,6 +4,10 @@
 #   Paradigm(s): Multi-paradigm (Functional, Object-Oriented)
 #   ********************
 
+fmt <- function(x) {
+  return(format(round(as.numeric(x), 2), nsmall = 2))
+}
+
 current_balance <- 1000.0
 currency <- "PHP"
 
@@ -26,30 +30,30 @@ switch(choice,
     "2" = {
         cat("Deposit Amount\n")
         account_name <- readline(prompt = "Account Name: ")
-        cat("Current Balance: ", current_balance, "\n")
+        cat("Current Balance: ", fmt(current_balance), "\n")
         cat("Currency: ", currency, "\n\n")
         deposit_amount <- as.numeric(readline(prompt = "Deposit Amount: "))
-        cat("\n***\nAccount Name = ", account_name, "\nDeposit Amount = ", deposit_amount)
+        cat("\n***\nAccount Name = ", account_name, "\nDeposit Amount = ", fmt(deposit_amount))
     },
     "3" = {
         cat("Withdraw Amount\n")
         account_name <- readline(prompt = "Account Name: ")
-        cat("Current Balance: ", current_balance, "\n")
+        cat("Current Balance: ", fmt(current_balance), "\n")
         cat("Currency: ", currency, "\n\n")
         withdraw_amount <- as.numeric(readline(prompt = "Withdraw Amount: "))
-        cat("\n***\nAccount Name = ", account_name, "\Withdraw Amount = ", withdraw_amount)
+        cat("\n***\nAccount Name = ", account_name, "\Withdraw Amount = ", fmt(withdraw_amount))
     },
     "4" = {
         cat("Foreign Currency Exchange\n")
         source_amount <- as.numeric(readline(prompt = "Source Amount (PHP): "))
         cat("\nExchanged Currency\n")
-        cat("[1] Philippine Peso (PHP) = ", source_amount, "\n")
-        cat("[2] United States Dollar (USD) = ", source_amount * 62.00, "\n")
-        cat("[3] Japanese Yen (JPY) = ", source_amount * 0.40, "\n")
-        cat("[4] British Pound Sterling (GBP) = ", source_amount * 84.00, "\n")
-        cat("[5] Euro (EUR) = ", source_amount * 72.00, "\n")
-        cat("[6] Chinese Yuan Renminni (CNY) = ", source_amount * 9.00, "\n")
-        cat("\n***\nSource Currency = Philippine Peso (PHP)\nSource Amount (PHP) = ", source_amount)
+        cat("[1] Philippine Peso (PHP) = ", fmt(source_amount), "\n")
+        cat("[2] United States Dollar (USD) = ", fmt(source_amount * 62.00), "\n")
+        cat("[3] Japanese Yen (JPY) = ", fmt(source_amount * 0.40), "\n")
+        cat("[4] British Pound Sterling (GBP) = ", fmt(source_amount * 84.00), "\n")
+        cat("[5] Euro (EUR) = ", fmt(source_amount * 72.00), "\n")
+        cat("[6] Chinese Yuan Renminni (CNY) = ", fmt(source_amount * 9.00), "\n")
+        cat("\n***\nSource Currency = Philippine Peso (PHP)\nSource Amount (PHP) = ", fmt(source_amount))
     },
     "5" = {
         cat("Record Exchange Rate\n\n")
