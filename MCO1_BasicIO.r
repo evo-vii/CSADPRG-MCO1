@@ -41,7 +41,7 @@ switch(as.character(choice),
         cat("Current Balance: ", fmt(current_balance), "\n")
         cat("Currency: ", currency, "\n\n")
         withdraw_amount <- as.numeric(readline(prompt = "Withdraw Amount: "))
-        cat("\n***\nAccount Name = ", account_name, "\Withdraw Amount = ", fmt(withdraw_amount))
+        cat("\n***\nAccount Name = ", account_name, "\nWithdraw Amount = ", fmt(withdraw_amount))
     },
     "4" = {
         cat("Foreign Currency Exchange\n")
