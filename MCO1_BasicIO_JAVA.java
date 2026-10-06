@@ -1,8 +1,8 @@
-******************************************
+/******************************************
 Lastnames:Bobadilla, Calvez, Casao, Sanico
 Language: Java
 Paradigm: Object Oriented Programming
-******************************************
+******************************************/
 
 import java.util.Scanner;
 import java.util.ArrayList;
