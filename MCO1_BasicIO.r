@@ -1,3 +1,9 @@
+#   ********************
+#   Last names: Bobadilla, Calvez, Casao, Sanico
+#   Language: R
+#   Paradigm(s): Multi-paradigm (Functional, Object-Oriented)
+#   ********************
+
 current_balance <- 1000.0
 currency <- "PHP"
 
@@ -13,6 +19,7 @@ cat("\n***\nChoice = ", choice, "\n\n")
 
 switch(choice,
     "1" = {
+        cat("Register Account Name\n")
         account_name <- readline(prompt = "Account Name: ")
         cat("\n***\nAccount Name = ", account_name)
     },
@@ -25,12 +32,12 @@ switch(choice,
         cat("\n***\nAccount Name = ", account_name, "\nDeposit Amount = ", deposit_amount)
     },
     "3" = {
-        cat("Deposit Amount\n")
+        cat("Withdraw Amount\n")
         account_name <- readline(prompt = "Account Name: ")
         cat("Current Balance: ", current_balance, "\n")
         cat("Currency: ", currency, "\n\n")
-        withdraw_amount <- as.numeric(readline(prompt = "Widthraw Amount: "))
-        cat("\n***\nAccount Name = ", account_name, "\nWidthraw Amount = ", withdraw_amount)
+        withdraw_amount <- as.numeric(readline(prompt = "Withdraw Amount: "))
+        cat("\n***\nAccount Name = ", account_name, "\Withdraw Amount = ", withdraw_amount)
     },
     "4" = {
         cat("Foreign Currency Exchange\n")
@@ -42,7 +49,7 @@ switch(choice,
         cat("[4] British Pound Sterling (GBP) = ", source_amount * 84.00, "\n")
         cat("[5] Euro (EUR) = ", source_amount * 72.00, "\n")
         cat("[6] Chinese Yuan Renminni (CNY) = ", source_amount * 9.00, "\n")
-        cat("\n***\nSource Currency = Philippine Peso (PHP)\nSource Amount = ", source_amount)
+        cat("\n***\nSource Currency = Philippine Peso (PHP)\nSource Amount (PHP) = ", source_amount)
     },
     "5" = {
         cat("Record Exchange Rate\n\n")
