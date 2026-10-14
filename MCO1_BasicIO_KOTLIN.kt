@@ -2,21 +2,73 @@
  * ********************
  * Last names: Bobadilla, Calvez, Casao, Sanico
  * Language: Kotlin
- * Paradigm(s): Functional Programming
+ * Paradigm(s): Functional Programming, Object-Oriented Programming
  * ********************
  */
 
+
+// Pre-processor Directives
 import java.util.Scanner
 
+
+// Classes
+
+
+class Account (var accNum: Int, var name: String, var pin: String, var contactNum: Int) {
+    
+    init {
+        
+        
+        
+    }
+    
+}
+
+class ExcRate (var code: String, var name: String, var rate: Double){
+    
+    
+    
+}
+
+class SysControl {
+
+    
+    // Helpers
+    
+    
+    fun logUser() : Boolean {
+        
+        
+        
+        
+        
+        return bPass
+        
+    }
+        
+    
+    // Core Methods
+    
+    
     fun regAcc(sc: Scanner) {
         
+        var bPass = true
+        
+        // Menu Header
         println("\nRegister Account Name")
         print("Account Name: ")
         
         var nInput = sc.nextLine()
         
+        // FOR DEBUG - INPUT CHECK
         println("\n***")
-        println("Account Name = " + nInput)
+        println("Inputted Account Name = " + nInput)
+        
+        // First Layer Checks
+        if (numAccounts > MAX_ACC) {
+            bPass = false
+            println("Warning! Maximum Number of Accounts Exceeded!")
+        }
 
         sc.close()
 
@@ -132,38 +184,62 @@ import java.util.Scanner
         sc.close()
     }
 
+    
+    // Control Methods
+    
+    
     fun callMenu(nSelection: Int, sc: Scanner) {
         
         if (nSelection == 1) {
-            regAcc(sc)
-        } else if (nSelection == 2) {
             deposit(sc)
-        } else if (nSelection == 3) {
+        } else if (nSelection == 2) {
             withdraw(sc)
-        } else if (nSelection == 4) {
+        } else if (nSelection == 3) {
             recordER(sc)
-        } else if (nSelection == 5) {
+        } else if (nSelection == 4) {
             currEx(sc)
-        } else if (nSelection == 6) {
+        } else if (nSelection == 5) {
         }
         
     }
 
-    fun showMainMenu(sc: Scanner) : Int {
+    fun showLogin(sc: Scanner) : Int {
         
-        println("Select Transaction:")
-        println("[1] Register Account Name")
-        println("[2] Deposit Amount")
-        println("[3] Withdraw Amount")
-        println("[4] Currency Exchange")
-        println("[5] Record Exchange Rates")
-        println("[6] Show Interest Amount")
-        print("\nChoice: ")
+        println("\n========================================\n");
+        println("        BANKING SYSTEM - LOGIN\n");
+        println("========================================\n");
+        println("[1] Login\n");
+        println("[2] Register New Account\n");
+        println("[3] Exit Program\n");
+        println("========================================\n");
         
+        print(">> ")
         var nChoice = sc.nextInt()
         var temp = sc.nextLine()
         
-        if (nChoice != 1 && nChoice != 2 && nChoice != 3 && nChoice != 4 && nChoice != 5 && nChoice != 6) {
+        if (nChoice != 1 && nChoice != 2 && nChoice != 3) {
+            nChoice = -1
+        }
+        
+        return nChoice
+        
+    }
+    
+    fun showMainMenu(sc: Scanner) : Int {
+        
+        println("Select Transaction:")
+        println("[1] Deposit Amount")
+        println("[2] Withdraw Amount")
+        println("[3] Currency Exchange")
+        println("[4] Record Exchange Rates")
+        println("[5] Show Interest Amount")
+        print("\nChoice: ")
+        
+        print(">> ")
+        var nChoice = sc.nextInt()
+        var temp = sc.nextLine()
+        
+        if (nChoice != 1 && nChoice != 2 && nChoice != 3 && nChoice != 4 && nChoice != 5) {
             nChoice = -1
         }
         
@@ -171,28 +247,60 @@ import java.util.Scanner
         
     }
 
-    fun main() {
+    
+    // Attributes
+    
+    
+    var numAccounts = 0
+    
+    val MAX_ACC = 100
+    val ADMIN_NAME = "admin"
+    val ADMIN_PASS = "2580"
+    
+    
+}
+
+// Main Function
+
+fun main() {
         
-        var bFlag = false
-        var nChoice = 0
-        val sc = Scanner(System.`in`)
+    var bFlag = false
+    var nChoice = 0
+    var nMainChoice = 0
+    val sc = Scanner(System.`in`)
+    val main = SysControl()
         
-        while(bFlag == false) {
+    // Control flow for login screen
+    while(bFlag == false) {
             
-            nChoice = showMainMenu(sc)
+        nChoice = main.showLogin(sc)
             
-            if (nChoice != -1) {
-                // I/O Checks
-                println("\n***")
-                println("Choice = " + nChoice + "\n")
-                
-                callMenu(nChoice, sc)
-                bFlag = true
-            } else {
-                println("\nInvalid input! Range 1 - 6 only!\n")
-            }
+        if (nChoice == 1) {         // Login Flow
+            
+            // I/O Checks
+            println("\n***")
+            println("Choice = " + nChoice + "\n")
+            
+            nMainChoice = main.showMainMenu(sc)
+            main.callMenu(nChoice, sc)
+            bFlag = true
+            
+        } else if (nChoice == 2) {  // Register Flow
+            
+            main.regAcc(sc)
+            
+        } else if (nChoice == 3) {  // Exit Flow
+            
+            println("Thank you for using the Banking System!\n")    
+        
+            bFlag = true
+        } else {
+            
+            println("\nInvalid input! Range 1 - 6 only!\n") // Error Message
+            
         }
-        
-        
     }
+        
+        
+}
 
