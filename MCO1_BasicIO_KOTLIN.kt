@@ -14,13 +14,33 @@ import java.util.Scanner
 // Classes
 
 
-class Account (var accNum: Int, var name: String, var pin: String, var contactNum: Int) {
+class Account (var accNum: Int, var name: String, var pin: String, var contactNum: String) {
+    
+    var currBal = 0.0
+    
+    companion object {
+        var numAccs = 0
+    }
+    
     
     init {
         
-        
+        numAccs++
         
     }
+    
+    fun getAccNumb() : Int {
+        return accNum
+    }
+    
+    fun getUsername() : String {
+        return name
+    }
+    
+    fun getNumOfAccs(): Int {
+        return numAccs
+    }
+    
     
 }
 
@@ -33,19 +53,23 @@ class ExcRate (var code: String, var name: String, var rate: Double){
 class SysControl {
 
     
-    // Helpers
+    // Attributes
     
     
-    fun logUser() : Boolean {
+    var numAccounts = 0
+    
+    val MAX_ACC = 100
+    
+    companion object {
         
+        val ADMIN_NAME = "admin"
+        val ADMIN_PASS = "2580"
+    
+        val ADMIN_ACC = Account(1000, ADMIN_NAME, ADMIN_PASS, "639999999999")
+        var accounts = mutableListOf(ADMIN_ACC)
         
-        
-        
-        
-        return bPass
-        
+        fun getAccList(n: Int): Account = accounts.get(n)
     }
-        
     
     // Core Methods
     
@@ -53,26 +77,181 @@ class SysControl {
     fun regAcc(sc: Scanner) {
         
         var bPass = true
+
+        // Debug
+        // numAccounts = MAX_ACC+1 
         
+        // First Layer Checks (Account Capacity)
+        if (numAccounts > MAX_ACC) {
+            bPass = false
+            println("\nWarning! Maximum Number of Accounts Exceeded!")
+            return 
+        }
+
         // Menu Header
         println("\nRegister Account Name")
         print("Account Name: ")
         
         var nInput = sc.nextLine()
         
+        try {
+            
+            // Trying to test and cause an exception if inputted string is empty.
+            if (nInput[0].compareTo('\u0000') == 0) {
+                println("Warning: Invalid account name!") 
+            }
+            
+        } catch (e: Exception) {
+            
+            println("\nWarning: Invalid input has caused an exception error!")
+            println("Please retry your action.")
+            return
+        }
+        
+        // Second Layer Checks (Validity of Inputted Name)
+        
+        var nAccName = nInput // Transfers the inputted name from the temporary variable
+        
+        // Checks for similar name
+        // val iterator = accounts.iterator()
+        
+        for (elem in accounts) {
+            if (elem.getUsername().compareTo(nAccName) == 0) {
+                println("\nWarning: Account Name has already been taken!")
+                return
+            }
+        }
+        
+        // Input for Pin
+        print("Enter New Pin: ")
+        var pinInput = sc.nextLine()
+        
+        try {
+            
+            // Trying to test and cause an exception if inputted string is empty.
+            if (pinInput[0].compareTo('\u0000') == 0) {
+                println("Warning: Invalid Pin!") 
+            }
+            
+        } catch (e: Exception) {
+            
+            println("\nWarning: Invalid input has caused an exception error!")
+            println("Please retry your action.")
+            return
+        }
+        
+        if (pinInput.length > 4) {
+            println("\nWarning: Pin is greater than 4 characters!")
+            return
+        }
+        
+        for (i in pinInput.indices) {
+            if (pinInput[i] < '0' || pinInput[i] > '9') {
+                println("\nWarning: Pin includes non-numeric characters!")
+                return 
+            }
+        }
+        
+        var pin4 = pinInput
+        
+        // Input for Contact Number
+        print("\nEnter Contact Number: ")
+        var CNInput = sc.nextLine()
+        
+        try {
+            
+            // Trying to test and cause an exception if inputted string is empty.
+            if (CNInput[0].compareTo('\u0000') == 0) {
+                println("Warning: Invalid Number!") 
+            }
+            
+        } catch (e: Exception) {
+            
+            println("\nWarning: Invalid input has caused an exception error!")
+            println("Please retry your action.")
+            return
+        }
+        
+        if (CNInput.length != 11) {
+            println("\nWarning: Invalid length of mobile number!")
+            return
+        }
+        
+        for (i in pinInput.indices) {
+            if (pinInput[i] < '0' || pinInput[i] > '9') {
+                println("\nWarning: Pin includes non-numeric characters!")
+                return 
+            }
+        }
+        
+        var contact = CNInput
+        
+        accounts.add(Account(1000 + Account.numAccs, nAccName, pin4, contact))
+        
+        var accIndex = 0
+        
+        for (j in accounts) {
+            if (j.getUsername().compareTo(nAccName) == 0) {
+                accIndex = accounts.indexOf(j)
+            }
+        }
+        
         // FOR DEBUG - INPUT CHECK
         println("\n***")
-        println("Inputted Account Name = " + nInput)
-        
-        // First Layer Checks
-        if (numAccounts > MAX_ACC) {
-            bPass = false
-            println("Warning! Maximum Number of Accounts Exceeded!")
-        }
-
-        sc.close()
+        println("Inputted Account Name = " + accounts.get(accIndex).getUsername())
 
     }
+
+    
+    // Control Methods
+    
+
+    fun showMainMenu(sc: Scanner) : Int {
+        
+        println("\n========================================\n");
+        println("        BANKING SYSTEM - LOGIN\n");
+        println("========================================\n");
+        println("[1] Login\n");
+        println("[2] Register New Account\n");
+        println("[3] Exit Program\n");
+        println("========================================\n");
+        
+        print(">> ")
+        var nChoice = sc.nextInt()
+        var temp = sc.nextLine()
+        
+        if (nChoice != 1 && nChoice != 2 && nChoice != 3) {
+            nChoice = -1
+        }
+        
+        return nChoice
+        
+    }
+    
+    fun showLogin(sc: Scanner) : Int {
+     
+        println("Enter Account Name: ")
+        var userIn = sc.nextLine()
+        
+        
+           
+    }
+
+    
+    // Setters
+
+    
+    
+    
+    
+    // Getters
+
+    
+    
+    
+}
+
+class AccountCenter (var currAcc: Account ){
 
     fun deposit(sc: Scanner) {
         
@@ -183,10 +362,6 @@ class SysControl {
         
         sc.close()
     }
-
-    
-    // Control Methods
-    
     
     fun callMenu(nSelection: Int, sc: Scanner) {
         
@@ -202,30 +377,8 @@ class SysControl {
         }
         
     }
-
-    fun showLogin(sc: Scanner) : Int {
-        
-        println("\n========================================\n");
-        println("        BANKING SYSTEM - LOGIN\n");
-        println("========================================\n");
-        println("[1] Login\n");
-        println("[2] Register New Account\n");
-        println("[3] Exit Program\n");
-        println("========================================\n");
-        
-        print(">> ")
-        var nChoice = sc.nextInt()
-        var temp = sc.nextLine()
-        
-        if (nChoice != 1 && nChoice != 2 && nChoice != 3) {
-            nChoice = -1
-        }
-        
-        return nChoice
-        
-    }
     
-    fun showMainMenu(sc: Scanner) : Int {
+    fun showTransacMenu(sc: Scanner) : Int {
         
         println("Select Transaction:")
         println("[1] Deposit Amount")
@@ -246,34 +399,31 @@ class SysControl {
         return nChoice
         
     }
-
     
-    // Attributes
-    
-    
-    var numAccounts = 0
-    
-    val MAX_ACC = 100
-    val ADMIN_NAME = "admin"
-    val ADMIN_PASS = "2580"
-    
-    
+    fun setAccount(a: Account) {
+        currAcc = a
+    }
 }
+    
 
 // Main Function
 
 fun main() {
         
+    // Control Variables
     var bFlag = false
     var nChoice = 0
     var nMainChoice = 0
+    
+    // Reference Types
     val sc = Scanner(System.`in`)
     val main = SysControl()
+    val center = AccountCenter(SysControl.getAccList(0))
         
     // Control flow for login screen
     while(bFlag == false) {
             
-        nChoice = main.showLogin(sc)
+        nChoice = main.showMainMenu(sc)
             
         if (nChoice == 1) {         // Login Flow
             
@@ -281,9 +431,8 @@ fun main() {
             println("\n***")
             println("Choice = " + nChoice + "\n")
             
-            nMainChoice = main.showMainMenu(sc)
-            main.callMenu(nChoice, sc)
-            bFlag = true
+            // Account Validation
+            
             
         } else if (nChoice == 2) {  // Register Flow
             
@@ -291,7 +440,7 @@ fun main() {
             
         } else if (nChoice == 3) {  // Exit Flow
             
-            println("Thank you for using the Banking System!\n")    
+            println("\nThank you for using the Banking System!\n")    
         
             bFlag = true
         } else {
