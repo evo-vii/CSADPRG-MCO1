@@ -293,7 +293,7 @@ class AccountCenter (var currAcc: Account) {
         println("\nDeposit Amount")
         println("Account Name: ${currAcc.getUsername()}")
         
-        println("Current Balance: ${currAcc.getBal()}")
+        println("Current Balance: %.2f".format(currAcc.getBal()))
         print("Currency: ")
         var currChoice = sc.nextLine()
         
@@ -312,10 +312,16 @@ class AccountCenter (var currAcc: Account) {
             return
         }
         
+        if (depositIn <= 0) {
+            println("\nWarning: Invalid amount!")
+            return
+        }
+        
         var convertedVal = 0.0
         
         if (currChoice.compareTo("PHP") == 0) {
             currAcc.deposit(depositIn)
+            convertedVal = depositIn
         } else {
             convertedVal = reverseConversion(depositIn, checkCurrency(currChoice))
             currAcc.deposit(convertedVal)
@@ -325,8 +331,8 @@ class AccountCenter (var currAcc: Account) {
         
         println("\n***")
         println("Account Name: ${currAcc.getUsername()}")
-        println("Current Balance (PHP): ${currAcc.getBal()}")
-        println("Deposited Amount = " + "%.2f".format(depositIn))
+        println("Current Balance (PHP): %.2f".format(currAcc.getBal()))
+        println("Deposited Amount (Autoconverted to Target Currency) = " + "%.2f".format(convertedVal))
         
     }
 
@@ -343,8 +349,7 @@ class AccountCenter (var currAcc: Account) {
         println("\nWithdraw Amount")
         println("Account Name: ${currAcc.getUsername()}")
         
-        println("Current Balance: ${currAcc.getBal()}")
-        
+        println("Current Balance: %.2f".format(currAcc.getBal()))
         print("Currency: ")
         var currChoice = sc.nextLine()
         
@@ -363,13 +368,19 @@ class AccountCenter (var currAcc: Account) {
             return
         }
         
+        if (withdrawIn <= 0) {
+            println("\nWarning: Invalid amount!")
+            return
+        }
+        
         var convertedVal = 0.0
         
         if (currChoice.compareTo("PHP") == 0) {
             if (currAcc.withdraw(withdrawIn) == false) {
-            println("\nWithdraw Failed! Insufficient Funds!")
-            return 
-        }
+                println("\nWithdraw Failed! Insufficient Funds!")
+                return 
+            }
+            convertedVal = withdrawIn
         } else {
             convertedVal = reverseConversion(withdrawIn, checkCurrency(currChoice))
             
@@ -381,8 +392,8 @@ class AccountCenter (var currAcc: Account) {
         
         println("\n***")
         println("Account Name: ${currAcc.getUsername()}")
-        println("Current Balance (PHP): ${currAcc.getBal()}")
-        println("Withdrawal Amount = " + "%.2f".format(withdrawIn))
+        println("Current Balance (PHP): %.2f".format(currAcc.getBal()))
+        println("Withdrawal Amount = " + "%.2f".format(convertedVal))
         
         
     }
@@ -407,12 +418,12 @@ class AccountCenter (var currAcc: Account) {
         
         println("\nRecord Exchange Rate\n")
         
-        println("[1] Philippine Peso (PHP)          | Current Rate: 1 PHP = ${rates.get(0).getExRate()}")
-        println("[2] United States Dollar (USD)     | Current Rate: 1 USD = ${rates.get(1).getExRate()}")
-        println("[3] Japanese Yen (JPY)             | Current Rate: 1 JPY = ${rates.get(2).getExRate()}")
-        println("[4] British Pound Sterling (GBP)   | Current Rate: 1 GBP = ${rates.get(3).getExRate()}")
-        println("[5] Euro (EUR)                     | Current Rate: 1 EUR = ${rates.get(4).getExRate()}")
-        println("[6] Chinese Yuan Renminni (CNY)    | Current Rate: 1 CNY = ${rates.get(5).getExRate()}")
+        println("[1] Philippine Peso (PHP)          | Current Rate: 1 PHP = %.2f".format(rates.get(0).getExRate()))
+        println("[2] United States Dollar (USD)     | Current Rate: 1 USD = %.2f".format(rates.get(1).getExRate()))
+        println("[3] Japanese Yen (JPY)             | Current Rate: 1 JPY = %.2f".format(rates.get(2).getExRate()))
+        println("[4] British Pound Sterling (GBP)   | Current Rate: 1 GBP = %.2f".format(rates.get(3).getExRate()))
+        println("[5] Euro (EUR)                     | Current Rate: 1 EUR = %.2f".format(rates.get(4).getExRate()))
+        println("[6] Chinese Yuan Renminni (CNY)    | Current Rate: 1 CNY = %.2f".format(rates.get(5).getExRate()))
         
         while (inputVal == false) {
             print("\nSelect Foreign Currency: ")
@@ -460,7 +471,7 @@ class AccountCenter (var currAcc: Account) {
         } else {
             println("\n***")
             println("Recording of Rates Successful!")
-            println("Set ${rates.get(choice-1).getExCode()}\'s rate to ${rates.get(choice-1).getExRate()}")
+            println("Set ${rates.get(choice-1).getExCode()}\'s rate to %.2f".format(rates.get(choice-1).getExRate()))
         }
         
         if (returnToMM(sc) == true) {
@@ -574,7 +585,7 @@ class AccountCenter (var currAcc: Account) {
         pesoConverted = automaticConversion(pesoConverted, excCurr-1)
         
         println("\n***")
-        println("\nExchanged Amount: $pesoConverted")
+        println("\nExchanged Amount: %.2f".format(pesoConverted))
         
         if (returnToMM(sc) == true) {
             currEx(sc)
@@ -616,7 +627,7 @@ class AccountCenter (var currAcc: Account) {
         
         println("\nShow Interest Amount")
         println("Account Name: ${currAcc.getUsername()}")
-        println("Current Balance: ${currAcc.getBal()}")
+        println("Current Balance: %.2f".format(currAcc.getBal()))
         
         print("Currency: ")
         var currChoice = sc.nextLine()
@@ -642,7 +653,13 @@ class AccountCenter (var currAcc: Account) {
                 println("\nInvalid input! Append \"days\" after numerical input (ex. 5 days) ")
                 
             } else {
-                choice = dayIn.substringBefore(" ").toInt()
+                
+                try {
+                    choice = dayIn.substringBefore(" ").toInt()
+                } catch (e: Exception) {
+                    println("\nWarning: No possible numerical value from input! / Unknown input!")
+                    return
+                }
                 
                 if (choice >= 1) {
                     inputDay = true
