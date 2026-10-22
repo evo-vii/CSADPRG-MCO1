@@ -17,7 +17,7 @@ import java.util.Scanner
 /**
  * This is the account class which acts as a template to store the user's account details
  */
-class Account (var accNum: Int, var name: String, var pin: String, var contactNum: String) {
+class Account (var accNum: Int, var name: String, var pin: String) {
     
     var currBal = 0.0
     
@@ -802,7 +802,7 @@ class SysControl {
         val ADMIN_NAME = "admin"
         val ADMIN_PASS = "2580"
     
-        val ADMIN_ACC = Account(1000, ADMIN_NAME, ADMIN_PASS, "639999999999")
+        val ADMIN_ACC = Account(1000, ADMIN_NAME, ADMIN_PASS)
         var accounts = mutableListOf(ADMIN_ACC)
         
         // Retrieves an account within the list given an index (n)
@@ -920,7 +920,7 @@ class SysControl {
         
     
     /*
-     * Allows a user to register an account given a name, pin, and contact number
+     * Allows a user to register an account given a name, and pin
      * 
      * @param sc is the scanner object allowing for basic input
      * @return NONE
@@ -985,29 +985,7 @@ class SysControl {
         
         var pin4 = pinInput
         
-        // Input for Contact Number
-        print("\nEnter Contact Number: ")
-        var CNInput = sc.nextLine()
-        
-        if (validateInput(CNInput) == false) {
-            return
-        }
-        
-        if (CNInput.length != 11) {
-            println("\nWarning: Invalid length of mobile number!")
-            return
-        }
-        
-        for (i in pinInput.indices) {
-            if (pinInput[i] < '0' || pinInput[i] > '9') {
-                println("\nWarning: Pin includes non-numeric characters!")
-                return 
-            }
-        }
-        
-        var contact = CNInput
-        
-        accounts.add(Account(1000 + Account.numAccs, nAccName, pin4, contact))
+        accounts.add(Account(1000 + Account.numAccs, nAccName, pin4))
         
         var accIndex = 0
         
