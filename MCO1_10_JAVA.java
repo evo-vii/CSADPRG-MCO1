@@ -724,8 +724,8 @@ public class  MCO1_10_JAVA extends JFrame {
             return;
         }
         showInput("REGISTER ACCOUNT", "ENTER NAME", 1, 30, false, text -> {
-            if (!text.matches("[a-z. ]+") || !text.matches(".*[a-z].*")) {
-                return "Use lowercase letters, spaces and periods only.";
+            if (!text.matches("[A-Za-z. ]+") || !text.matches(".*[A-Za-z].*")) {
+                return "Use letters, spaces and periods only.";
             }
             tempName = text;
             askRegisterPin();
@@ -1405,8 +1405,8 @@ public class  MCO1_10_JAVA extends JFrame {
     // asks for the new name of the customer
     void askNewName() {
         showInput("VIEW/UPDATE PROFILE", "ENTER NEW NAME", 1, 30, false, text -> {
-            if (!text.matches("[a-z. ]+") || !text.matches(".*[a-z].*")) {
-                return "Use lowercase letters, spaces and periods only.";
+            if (!text.matches("[A-Za-z. ]+") || !text.matches(".*[A-Za-z].*")) {
+                return "Use letters, spaces and periods only.";
             }
             profileAccount.setName(text);
             bank.save();
@@ -1548,8 +1548,11 @@ abstract class KeyDisplay extends JPanel {
     protected final ArrayList<Key> keys = new ArrayList<>();
     // the key that is being pressed
     private Key pressed;
+    // runs when a key is typed
+    protected final Consumer<String> onKey;
 
     public KeyDisplay(Consumer<String> onKey) {
+        this.onKey = onKey;
         setOpaque(false);
         setCursor(new Cursor(Cursor.HAND_CURSOR));
 
@@ -1563,12 +1566,27 @@ abstract class KeyDisplay extends JPanel {
                 // the key is typed when the mouse is released on the same key that was pressed
                 Key released = keyAt(e.getPoint());
                 if (pressed != null && pressed == released) {
-                    onKey.accept(pressed.value);
+                    keyClicked(pressed.value);
                 }
                 pressed = null;
                 repaint();
             }
         });
+    }
+
+    // runs when a key is clicked (the keyboard changes this to handle the CAPS key)
+    protected void keyClicked(String value) {
+        onKey.accept(value);
+    }
+
+    // the text drawn on a key (the keyboard changes this to show capital letters)
+    protected String labelOf(Key k) {
+        return k.label;
+    }
+
+    // true if the key should be highlighted (the keyboard highlights CAPS while it is on)
+    protected boolean isHighlighted(Key k) {
+        return false;
     }
 
     // finds the key at a point (null if there is none)
@@ -1585,6 +1603,8 @@ abstract class KeyDisplay extends JPanel {
     void drawKey(Graphics2D g2, Key k, Font font) {
         if (k == pressed) {
             g2.setColor(new Color(215, 215, 215));
+        } else if (isHighlighted(k)) {
+            g2.setColor(new Color(170, 215, 190));
         } else {
             g2.setColor(Color.WHITE);
         }
@@ -1597,18 +1617,22 @@ abstract class KeyDisplay extends JPanel {
         // draws the label in the middle of the key
         g2.setFont(font);
         FontMetrics fm = g2.getFontMetrics();
-        int x = k.area.x + (k.area.width - fm.stringWidth(k.label)) / 2;
+        String text = labelOf(k);
+        int x = k.area.x + (k.area.width - fm.stringWidth(text)) / 2;
         int y = k.area.y + (k.area.height + fm.getAscent() - fm.getDescent()) / 2;
-        g2.drawString(k.label, x, y);
+        g2.drawString(text, x, y);
     }
 }
 
 // displays the keyboard (lowercase letters only) that the user clicks
 class KeyBoardDisplay extends KeyDisplay {
+    // true when the CAPS key is on (the next letter typed is a capital letter)
+    private boolean shift = false;
+
     public KeyBoardDisplay(Consumer<String> onKey) {
         super(onKey);
 
-        // the letters of each row (no capital letters)
+        // the letters of each row (shown as small letters, capital when CAPS is on)
         String[] rows = { "qwertyuiop", "asdfghjkl", "zxcvbnm." };
         // size of each key 
         int keyW = 24;
@@ -1625,13 +1649,41 @@ class KeyBoardDisplay extends KeyDisplay {
             }
         }
 
-        // the space bar and the delete key on the last row
+        // the CAPS key, the space bar and the delete key on the last row
+        int capsW = 56;
         int spaceW = 150;
         int delW = 56;
-        int startX = (320 - (spaceW + gap + delW)) / 2;
+        int startX = (320 - (capsW + gap + spaceW + gap + delW)) / 2;
         int y = 20 + 3 * 30;
-        keys.add(new Key("SPACE", " ", startX, y, spaceW, 24));
-        keys.add(new Key("DEL", "BACK", startX + spaceW + gap, y, delW, 24));
+        keys.add(new Key("CAPS", "CAPS", startX, y, capsW, 24));
+        keys.add(new Key("SPACE", " ", startX + capsW + gap, y, spaceW, 24));
+        keys.add(new Key("DEL", "BACK", startX + capsW + gap + spaceW + gap, y, delW, 24));
+    }
+
+    // CAPS turns capital letters on or off, a capital letter turns CAPS off after it is typed
+    protected void keyClicked(String value) {
+        if (value.equals("CAPS")) {
+            shift = !shift;
+        } else if (shift && value.length() == 1 && Character.isLetter(value.charAt(0))) {
+            onKey.accept(value.toUpperCase());
+            shift = false;
+        } else {
+            onKey.accept(value);
+        }
+        repaint();
+    }
+
+    // shows capital letters on the keys while CAPS is on
+    protected String labelOf(Key k) {
+        if (shift && k.label.length() == 1 && Character.isLetter(k.label.charAt(0))) {
+            return k.label.toUpperCase();
+        }
+        return k.label;
+    }
+
+    // the CAPS key is highlighted while it is on
+    protected boolean isHighlighted(Key k) {
+        return shift && k.value.equals("CAPS");
     }
 
     protected void paintComponent(Graphics g) {
