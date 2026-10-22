@@ -664,8 +664,24 @@ class AccountCenter (var currAcc: Account) {
     /**
      * @param sysCtrl is the SysControl Object passed for account management
      */
-    fun closeAccount(sysCtrl: SysControl) {
-        sysCtrl.removeAccount(currAcc.getUsername())
+    fun closeAccount(sysCtrl: SysControl, sc: Scanner): Boolean {
+        
+        print("\nProceed with account closing? This action is irreversible. (Y/N): ")
+        
+        var input = sc.nextLine()
+        
+        if (validateStringInput(input) == false) {
+            return false
+        } else if (input.compareTo("N") == 0 ) {
+            println("Did not close account.")
+            return false
+        } else if (input.compareTo("Y") == 0 ){
+            sysCtrl.removeAccount(currAcc.getUsername())
+            return true
+        } else {
+            println("Warning: Input unrecognized, defaulting to \"N\". Did not close account")
+            return false
+        }
     }
     
     /*
@@ -675,7 +691,7 @@ class AccountCenter (var currAcc: Account) {
      * @param sysCtrl is the SysControl Object passed for account management
      * @return NONE
      */
-    fun callMenu(nSelection: Int, sc: Scanner, sysCtrl: SysControl) {
+    fun callMenu(nSelection: Int, sc: Scanner) {
         
         if (nSelection == 1) {
             deposit(sc)
@@ -687,8 +703,6 @@ class AccountCenter (var currAcc: Account) {
             recordER(sc)
         } else if (nSelection == 5) {
             presentInterest(sc)
-        } else if (nSelection == 6) {
-            closeAccount(sysCtrl)
         }
         
     }
@@ -735,12 +749,12 @@ class AccountCenter (var currAcc: Account) {
             }
             
             if (nChoice == 1 || nChoice == 2 || nChoice == 3 || nChoice == 4 || nChoice == 5 || nChoice == 6) {
-                callMenu(nChoice, sc, sysCtrl)
+                callMenu(nChoice, sc)
             
                 if (nChoice == 6) {
-                    if (currAcc.getUsername().compareTo("admin") == 0) {
+                    if (currAcc.getAccNumb() == 1000) {
                         println("\nWarning: Invalid action for administrator account.")
-                    } else {
+                    } else if (closeAccount(sysCtrl, sc) == true){
                         println("\nAccount ${currAcc.getUsername()} closed.")
                         logoutPass = true
                     }
