@@ -118,7 +118,7 @@ class ExcRate (val code: String, val name: String, var rate: Double) {
      * @return the success of the operation
      */
     fun setExRate(d: Double): Boolean {
-        if (d < 0) {
+        if (d <= 0 || d.isNaN() || d.isInfinite()) {
             return false
         } else {
             rate = d
@@ -193,14 +193,7 @@ class AccountCenter (var currAcc: Account) {
      */
     fun validateStringInput(nInput: String): Boolean {
         
-        try {
-            
-            // Trying to test and cause an exception if inputted string is empty.
-            if (nInput[0].compareTo('\u0000') == 0) {
-                println("Warning: Null Input!!") 
-            }
-            
-        } catch (e: Exception) {
+        if (nInput.isBlank()) {
             
             println("\nWarning: Invalid input has caused an error!")
             println("Please retry your action.")
@@ -229,17 +222,19 @@ class AccountCenter (var currAcc: Account) {
      * @return the index of the currency being retrieved from the list
      */
     fun checkCurrency(input: String): Int {
-        if (input == "PHP") {
+        var code = input.uppercase()
+        
+        if (code == "PHP") {
             return 0
-        } else if (input == "USD") {
+        } else if (code == "USD") {
             return 1
-        } else if (input == "JPY") {
+        } else if (code == "JPY") {
             return 2
-        } else if (input == "GBP") {
+        } else if (code == "GBP") {
             return 3
-        } else if (input == "EUR") {
+        } else if (code == "EUR") {
             return 4
-        } else if (input == "CNY") {
+        } else if (code == "CNY") {
             return 5
         } else {
             return -1
@@ -261,18 +256,18 @@ class AccountCenter (var currAcc: Account) {
     fun returnToMM(sc: Scanner): Boolean {
         
         print("\nBack to Main Menu? (Y/N): ")
-        var exitChoice = sc.nextLine()
-        
+        var exitChoice = sc.nextLine().trim().uppercase()
+
         if (validateStringInput(exitChoice) == false) {
-            return false
-        } else if (exitChoice.compareTo("N") == 0) {
             return true
+        } else if (exitChoice.compareTo("N") == 0) {
+            return false
         } else if (exitChoice.compareTo("Y") == 0) {
             println("\nReturning to main menu.")
-            return false
+            return true
         } else {
             println("\nWarning: Input unrecognized, defaulting to \"Y\", returning to main menu.")
-            return false
+            return true
         }
         
     }
@@ -293,7 +288,8 @@ class AccountCenter (var currAcc: Account) {
         println("\nDeposit Amount")
         println("Account Name: ${currAcc.getUsername()}")
         
-        println("Current Balance: %.2f".format(currAcc.getBal()))
+        println("Current Balance (PHP): %.2f".format(currAcc.getBal()))
+        System.out.printf("\nPHP - PESO\nUSD - US DOLLAR\nJPY - JAPANESE YEN\nGBP - BRITISH POUND STERLING\nEUR - EURO\nCNY - CHINESE YUAN RENMINBI\n\n")
         print("Currency: ")
         var currChoice = sc.nextLine()
         
@@ -309,17 +305,20 @@ class AccountCenter (var currAcc: Account) {
         } catch (e: Exception) {
             println("\nWarning: Input may not be a number!")
             println("\nDeposit Failed! Please try again!")
+            sc.nextLine()
             return
         }
         
-        if (depositIn <= 0) {
+        sc.nextLine()
+        
+        if (depositIn <= 0 || depositIn.isNaN() || depositIn.isInfinite()) {
             println("\nWarning: Invalid amount!")
             return
         }
         
         var convertedVal = 0.0
         
-        if (currChoice.compareTo("PHP") == 0) {
+        if (checkCurrency(currChoice) == 0) {
             currAcc.deposit(depositIn)
             convertedVal = depositIn
         } else {
@@ -331,8 +330,12 @@ class AccountCenter (var currAcc: Account) {
         
         println("\n***")
         println("Account Name: ${currAcc.getUsername()}")
-        println("Current Balance (PHP): %.2f".format(currAcc.getBal()))
-        println("Deposited Amount (Autoconverted to Target Currency) = " + "%.2f".format(convertedVal))
+        println("Updated Balance (PHP): %.2f".format(currAcc.getBal()))
+        println("Deposited Amount (PHP) = " + "%.2f".format(convertedVal))
+
+        if (returnToMM(sc) == false) {
+            deposit(sc)
+        }
         
     }
 
@@ -349,7 +352,8 @@ class AccountCenter (var currAcc: Account) {
         println("\nWithdraw Amount")
         println("Account Name: ${currAcc.getUsername()}")
         
-        println("Current Balance: %.2f".format(currAcc.getBal()))
+        println("Current Balance (PHP): %.2f".format(currAcc.getBal()))
+        System.out.printf("\nPHP - PESO\nUSD - US DOLLAR\nJPY - JAPANESE YEN\nGBP - BRITISH POUND STERLING\nEUR - EURO\nCNY - CHINESE YUAN RENMINBI\n\n")
         print("Currency: ")
         var currChoice = sc.nextLine()
         
@@ -365,17 +369,20 @@ class AccountCenter (var currAcc: Account) {
         } catch (e: Exception) {
             println("\nWarning: Input may not be a number!")
             println("\nWithdraw Failed! Please try again!")
+            sc.nextLine()
             return
         }
         
-        if (withdrawIn <= 0) {
+        sc.nextLine()
+        
+        if (withdrawIn <= 0 || withdrawIn.isNaN() || withdrawIn.isInfinite()) {
             println("\nWarning: Invalid amount!")
             return
         }
         
         var convertedVal = 0.0
         
-        if (currChoice.compareTo("PHP") == 0) {
+        if (checkCurrency(currChoice) == 0) {
             if (currAcc.withdraw(withdrawIn) == false) {
                 println("\nWithdraw Failed! Insufficient Funds!")
                 return 
@@ -392,9 +399,12 @@ class AccountCenter (var currAcc: Account) {
         
         println("\n***")
         println("Account Name: ${currAcc.getUsername()}")
-        println("Current Balance (PHP): %.2f".format(currAcc.getBal()))
-        println("Withdrawal Amount = " + "%.2f".format(convertedVal))
-        
+        println("Updated Balance (PHP): %.2f".format(currAcc.getBal()))
+        println("Withdrawal Amount (PHP) = " + "%.2f".format(convertedVal))
+
+        if (returnToMM(sc) == false) {
+            withdraw(sc)
+        }
         
     }
 
@@ -433,7 +443,9 @@ class AccountCenter (var currAcc: Account) {
                 
                 println("\nInvalid input! Encolse choice in \"[]\" (ex. [1]) ")
                 
-            } else if (currIn[0] != '[' && currIn[2] != ']') {
+            } else if (currIn.length != 3 || currIn[0] != '[' || currIn[2] != ']') {
+                println("\nInvalid input! Encolse choice in \"[]\" (ex. [1]) ")
+            } else if (currIn[1] < '0' || currIn[1] > '9') {
                 println("\nInvalid input! Encolse choice in \"[]\" (ex. [1]) ")
             } else {
                 choice = currIn[1].digitToInt()
@@ -474,7 +486,7 @@ class AccountCenter (var currAcc: Account) {
             println("Set ${rates.get(choice-1).getExCode()}\'s rate to %.2f".format(rates.get(choice-1).getExRate()))
         }
         
-        if (returnToMM(sc) == true) {
+        if (returnToMM(sc) == false) {
             recordER(sc)
         }
         
@@ -539,7 +551,7 @@ class AccountCenter (var currAcc: Account) {
         if (amtIn == 0.0) {
             println("\nWarning: Converting to rate 0 is erroneous! Please try again!")
             return 
-        } else if (amtIn < 0) {
+        } else if (amtIn < 0 || amtIn.isNaN() || amtIn.isInfinite()) {
             println("\nWarnng: Invalid value! Please try again!")
             return
         }
@@ -553,7 +565,7 @@ class AccountCenter (var currAcc: Account) {
         }
          
         
-        println("\nExchanged Currency Options")
+        println("\nExchanged Currency Options:")
         println("[1] Philippine Peso (PHP)")
         println("[2] United States Dollar (USD)")
         println("[3] Japanese Yen (JPY)")
@@ -584,11 +596,19 @@ class AccountCenter (var currAcc: Account) {
     
         pesoConverted = automaticConversion(pesoConverted, excCurr-1)
         
-        println("\n***")
-        println("\nExchanged Amount: %.2f".format(pesoConverted))
+        println("Exchange Amount: %.2f".format(pesoConverted))
         
-        if (returnToMM(sc) == true) {
+        print("\nConvert another currency (Y/N)? ")
+        var convertAgain = sc.nextLine()
+        
+        if (validateStringInput(convertAgain) == false) {
+            return
+        } else if (convertAgain.compareTo("Y") == 0) {
             currEx(sc)
+        } else if (convertAgain.compareTo("N") == 0) {
+            println("\nReturning to main menu.")
+        } else {
+            println("\nWarning: Input unrecognized, defaulting to \"N\", returning to main menu.")
         }
         
     }
@@ -596,19 +616,21 @@ class AccountCenter (var currAcc: Account) {
     /*
      * This is a display function which shows the table of interest per day
      * 
-     * @param days is the number of days inputted by the user, currIdx is the index of the currency used, stored in a list
+     * @param days is the number of days inputted by the user, principal is the amount in PHP entered by the user
      * @return NONE
      */
-    fun displayInterestTable(days: Int, currIdx: Int) {
+    fun displayInterestTable(days: Int, principal: Double) {
         
-        println("\n%-5s".format("Day") + " | %-14s".format("Interest") + " | %-16s".format("Balance") + " |")
+        println("\n%-5s".format("Day") + " | %-14s".format("Interest (PHP)") + " | %-16s".format("Balance (PHP)") + " |")
         
-        var sumBal = currAcc.getBal()
+        var sumBal = Math.round(principal*100)/100.0
+        var dailyInterest = 0.0
         var ctr = 1
-        
+
         do {
-            sumBal += sumBal*(INTEREST/365)
-            println("%-5d".format(ctr) + " | %-14.2f".format(INTEREST) + " | %-16.2f".format(automaticConversion(sumBal, currIdx)) + " |")
+            dailyInterest = Math.round(sumBal*(INTEREST/365)*100)/100.0
+            sumBal = Math.round((sumBal + dailyInterest)*100)/100.0
+            println("%-5d".format(ctr) + " | %-14.2f".format(dailyInterest) + " | %-16.2f".format(sumBal) + " |")
             ctr++
         } while (ctr <= days)
         
@@ -624,60 +646,47 @@ class AccountCenter (var currAcc: Account) {
         
         var inputDay = false
         var choice = 0
-        
+
         println("\nShow Interest Amount")
         println("Account Name: ${currAcc.getUsername()}")
-        println("Current Balance: %.2f".format(currAcc.getBal()))
-        
-        print("Currency: ")
-        var currChoice = sc.nextLine()
-        
-        if (checkCurrency(currChoice) == -1) {
-            println("\nWarning: Unrecognized Currency! Returning to Main Menu")
-            return
-        }
-        
+        println("Current Balance (PHP): %.2f".format(currAcc.getBal()))
+        println("Currency: PHP")
         println("Interest Rate: 5%")
-        
-        // Checking if input follows format of example: "5 days"
+
         while (inputDay == false) {
             print("\nTotal Number of Days: ")
             var dayIn = sc.nextLine()
             
-            if (dayIn.indexOf("days") == -1) {
-                
-                println("\nInvalid input! Append \"days\" after numerical input (ex. 5 days) ")
-                
-            } else if (dayIn.substring(dayIn.indexOf(" ") + 1).compareTo("days") != 0 ) {
-                
-                println("\nInvalid input! Append \"days\" after numerical input (ex. 5 days) ")
-                
+            try {
+                choice = dayIn.trim().toInt()
+            } catch (e: Exception) {
+                println("\nWarning: No possible numerical value from input! / Unknown input!")
+                return
+            }
+            
+            if (choice >= 1) {
+                inputDay = true
             } else {
-                
-                try {
-                    choice = dayIn.substringBefore(" ").toInt()
-                } catch (e: Exception) {
-                    println("\nWarning: No possible numerical value from input! / Unknown input!")
-                    return
-                }
-                
-                if (choice >= 1) {
-                    inputDay = true
-                    println(choice)
-                } else {
-                    println("\nInvalid input! At least input one (1) day!")
-                }
+                println("\nInvalid input! At least input one (1) day!")
             }
         }
         
-        displayInterestTable(choice, checkCurrency(currChoice))
+        displayInterestTable(choice, currAcc.getBal())
         
-        if (returnToMM(sc) == true) {
+        if (returnToMM(sc) == false) {
             presentInterest(sc)
         }
         
     }
     
+    fun checkBalance() {
+
+        println("\nCheck Balance")
+        println("Account Name: ${currAcc.getUsername()}")
+        println("Current Balance (PHP): %.2f".format(currAcc.getBal()))
+
+    }
+
     /**
      * @param sysCtrl is the SysControl Object passed for account management
      */
@@ -693,7 +702,7 @@ class AccountCenter (var currAcc: Account) {
             println("Did not close account.")
             return false
         } else if (input.compareTo("Y") == 0 ){
-            sysCtrl.removeAccount(currAcc.getUsername())
+            sysCtrl.removeAccount(currAcc.getAccNumb())
             return true
         } else {
             println("Warning: Input unrecognized, defaulting to \"N\". Did not close account")
@@ -720,6 +729,8 @@ class AccountCenter (var currAcc: Account) {
             recordER(sc)
         } else if (nSelection == 5) {
             presentInterest(sc)
+        } else if (nSelection == 6) {
+            checkBalance()
         }
         
     }
@@ -741,8 +752,9 @@ class AccountCenter (var currAcc: Account) {
         println("\n[3] Currency Exchange")
         println("\n[4] Record Exchange Rates")
         println("\n[5] Show Interest Amount")
-        println("\n[6] Close Account")
-        println("\n[7] Log Out")
+        println("\n[6] Check Balance")
+        println("\n[7] Close Account")
+        println("\n[8] Log Out")
         println("\n========================================\n")
         
         print("\n>> ")
@@ -760,28 +772,26 @@ class AccountCenter (var currAcc: Account) {
         
         var logoutPass = false
         
-        do {
-            if (excepted == true) {
-                break
-            }
+        if (excepted == false) {
             
             if (nChoice == 1 || nChoice == 2 || nChoice == 3 || nChoice == 4 || nChoice == 5 || nChoice == 6) {
                 callMenu(nChoice, sc)
-            
-                if (nChoice == 6) {
-                    if (currAcc.getAccNumb() == 1000) {
-                        println("\nWarning: Invalid action for administrator account.")
-                    } else if (closeAccount(sysCtrl, sc) == true){
-                        println("\nAccount ${currAcc.getUsername()} closed.")
-                        logoutPass = true
-                    }
+
+            } else if (nChoice == 7) {
+                if (currAcc.getAccNumb() == 1000) {
+                    println("\nWarning: Invalid action for administrator account.")
+                } else if (closeAccount(sysCtrl, sc) == true){
+                    println("\nAccount ${currAcc.getUsername()} closed.")
+                    logoutPass = true
                 }
-                
-            } else if (nChoice == 7){
+            } else if (nChoice == 8){
                 println("\nLogging out of the system.")
                 logoutPass = true
+            } else {
+                println("\nInvalid input! Range 1 - 8 only!")
             }
-        } while (nChoice != 1 && nChoice != 2 && nChoice != 3 && nChoice != 4 && nChoice != 5 && nChoice != 6 && nChoice != 7)
+            
+        }
         
         return logoutPass
     }
@@ -839,14 +849,7 @@ class SysControl {
      */
     fun validateInput(input: String): Boolean {
         
-        try {
-            
-            // Trying to test and cause an exception if inputted string is empty.
-            if (input[0].compareTo('\u0000') == 0) {
-                println("\nWarning: Null Input!!") 
-            }
-            
-        } catch (e: Exception) {
+        if (input.isBlank()) {
             
             println("\nWarning: Invalid input has caused an error!")
             println("Please retry your action.")
@@ -860,58 +863,45 @@ class SysControl {
      * A pass by method used to enclose an input function to load into
      * try-catch clauses.
      * .
-     * 
+     *
      * @param sc is the scanner object allowing for basic input
      * @return the integer input of the user
      */
     fun passInt(sc: Scanner): Int {
-        
-        
-        var input = sc.nextInt()
-        
+
+
+        var input = sc.nextLine().trim().toInt()
+
         return input
     }
-    
+
     /*
      * Searches if a user account exists within the list of accounts
-     * 
-     * @param input is the username of the account
+     *
+     * @param input is the account number of the account
      * @return the index of the account
      */
-    fun searchUser(input: String): Int {
-        
-        var ctr = 0
-        var flag = false
-        
-        do {
-            
-            if (accounts.get(ctr).getUsername() == input) {
-                flag = true
-            }
-            
-            ctr++
-            
-        } while (flag == false && ctr <= numAccounts);
-        
-        if (flag == false) {
-            return -1
-        }
-        
-        return ctr-1
-        
+    fun searchUser(input: Int): Int {
+
+        return accounts.indexOfFirst { it.getAccNumb() == input }
+
     }
-    
+
     /**
     * Removes an account from the accounts mutable list, representing the registered users on the application
-    * 
-    * @param user represents the username of the account to be closed
+    *
+    * @param user represents the account number of the account to be closed
     * @return NONE
     */
-    fun removeAccount(user: String) {
-            
-        accounts.remove(accounts.get(searchUser(user)))
-        numAccounts--
-            
+    fun removeAccount(user: Int) {
+
+        val idx = searchUser(user)
+
+        if (idx != -1) {
+            accounts.removeAt(idx)
+            numAccounts--
+        }
+
     }
     
     /*
@@ -944,14 +934,11 @@ class SysControl {
      */
     fun regAcc(sc: Scanner) {
         
-        var bPass = true
-
         // Debug
         // numAccounts = MAX_ACC+1 
         
         // First Layer Checks (Account Capacity)
-        if (numAccounts > MAX_ACC) {
-            bPass = false
+        if (numAccounts >= MAX_ACC) {
             println("\nWarning! Maximum Number of Accounts Exceeded!")
             return 
         }
@@ -988,8 +975,8 @@ class SysControl {
             return
         }
         
-        if (pinInput.length > 4) {
-            println("\nWarning: Pin is greater than 4 characters!")
+        if (pinInput.length != 4) {
+            println("\nWarning: Pin must be exactly 4 digits!")
             return
         }
         
@@ -1002,18 +989,12 @@ class SysControl {
         
         var pin4 = pinInput
         
-        accounts.add(Account(1000 + Account.numAccs, nAccName, pin4))
-        
-        var accIndex = 0
-        
-        for (j in accounts) {
-            if (j.getUsername().compareTo(nAccName) == 0) {
-                accIndex = accounts.indexOf(j)
-            }
-        }
-        
+        val newAcc = Account(1000 + Account.numAccs, nAccName, pin4)
+        accounts.add(newAcc)
+
         println("\n***")
         println("Account under \"$nAccName\" successfully created!")
+        println("Your Account Number: ${newAcc.getAccNumb()}")
         
         numAccounts++
 
@@ -1074,15 +1055,20 @@ class SysControl {
      */
     fun showLogin(sc: Scanner) : Int {
      
-        print("\nEnter Account Name: ")
-        var userIn = sc.nextLine()
-        
-        var userIdx = searchUser(userIn)
-        
-        if (validateInput(userIn) == false) {
+        print("\nEnter Account Number: ")
+        var userIn = 0
+
+        try {
+            userIn = passInt(sc)
+        } catch (e: Exception) {
+            println("\nWarning: Input may not be a number!")
             return -1
-        } else if (userIdx == -1) {
-            println("\nWarning: Login Failed. User not found")
+        }
+
+        var userIdx = searchUser(userIn)
+
+        if (userIdx == -1) {
+            println("\nWarning: Login Failed. Account not found")
             return -1
         }
         
@@ -1097,11 +1083,11 @@ class SysControl {
             if (matchPin(pin, userIdx) == true) {
                 pinPass = true
             } else {
-                println("Warning: Pin is incorrect! You have $attempts more attempt/s!")
                 attempts--
+                println("Warning: Pin is incorrect! You have $attempts more attempt/s!")
             }
-            
-        } while (attempts >= 0 && pinPass == false)
+
+        } while (attempts > 0 && pinPass == false)
         
         if (pinPass == false) {
             return -1
@@ -1129,7 +1115,6 @@ fun main() {
     // Control Variables
     var bFlag = false
     var nChoice = 0
-    var nMainChoice = 0
     
     // Reference Types
     val sc = Scanner(System.`in`)
@@ -1142,8 +1127,7 @@ fun main() {
     while(bFlag == false) {
             
         nChoice = main.showMainMenu(sc)
-        var temp = sc.nextLine()
-            
+
         if (nChoice == 1) {         // Login Flow
             
             var activeIdx = main.showLogin(sc)
@@ -1159,7 +1143,9 @@ fun main() {
                 while (logout == false) {
                     logout = center.showTransacMenu(sc, main)
                 }
-                
+
+                center.setAccount(SysControl.getAccList(0))
+
             } else {
                 println("\nUser attempt to Login Failed! Please try again")
             }
@@ -1167,6 +1153,10 @@ fun main() {
         } else if (nChoice == 2) {  // Register Flow
             
             main.regAcc(sc)
+            
+            while (center.returnToMM(sc) == false) {
+                main.regAcc(sc)
+            }
             
         } else if (nChoice == 3) {  // Exit Flow
             
@@ -1176,10 +1166,9 @@ fun main() {
             
         } else {
             
-            println("\nInvalid input! Range 1 - 6 only!\n") // Error Message
+            println("\nInvalid input! Range 1 - 3 only!\n") // Error Message
             
         }
     }
              
 }
-
