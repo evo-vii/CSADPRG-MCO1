@@ -85,7 +85,7 @@ back_to_main_menu <- function() {
 # @param currency Initial currency abbreviation
 # @return S3 object of class 'bank_account'
 # @pre balance >= 0
-new_bank_account <- function(name = "Not Registered", balance = 1000.0, currency = "PHP") {
+new_bank_account <- function(name = "Not Registered", balance = 0.0, currency = "PHP") {
   account <- list(
     name = name,
     balance = balance,
@@ -356,7 +356,8 @@ while (is_running) {
   display_options()
   choice <- get_valid_choice(1, 7)
   cat("\n***\n")
-  
+  #cat(sprintf("Choice = %d\n\n", choice))
+
   account <- switch(choice,
     "1" = register_account(account),
     "2" = deposit_amount(account),
