@@ -16,7 +16,6 @@ display_options <- function() {
   cat("[4] Currency Exchange\n")
   cat("[5] Record Exchange Rates\n")
   cat("[6] Show Interest Amount\n")
-  cat("[7] Exit The Program\n")
 }
 
 # Displays the list of supported foreign currencies
@@ -38,7 +37,7 @@ display_currencies <- function() {
 # @param prompt String text displayed to the user
 # @return Integer valid choice between min and max
 # @pre min <= max
-get_valid_choice <- function(min = 1, max = 7, prompt = "Choice: ") {
+get_valid_choice <- function(min = 1, max = 6, prompt = "Choice: ") {
   repeat {
     choice <- suppressWarnings(as.integer(readline(prompt = prompt)))
     if (!is.na(choice) && choice >= min && choice <= max) {
@@ -79,13 +78,25 @@ back_to_main_menu <- function() {
   }
 }
 
+convert_again <- function() {
+  repeat {
+    choice <- tolower(readline(prompt = "Convert another currency (Y/N)? "))
+    if (choice == "y") {
+      return(TRUE)
+    } else if (choice == "n") {
+      return(FALSE)
+    }
+    cat("Invalid Input! Please Enter 'y' or 'n'.\n")
+  }
+}
+
 # Constructor for creating a new bank_account S3 object
 # @param name Initial account holder name
 # @param balance Initial balance amount
 # @param currency Initial currency abbreviation
 # @return S3 object of class 'bank_account'
 # @pre balance >= 0
-new_bank_account <- function(name = "Not Registered", balance = 1000.0, currency = "PHP") {
+new_bank_account <- function(name = "Not Registered", balance = 0, currency = "PHP") {
   account <- list(
     name = name,
     balance = balance,
@@ -232,15 +243,27 @@ register_account <- function(account) {
 # @pre none
 deposit_amount <- function(account) {
   cat("Deposit Amount\n")
+
+  if (account$name == "Not Registered") {
+    cat("Please register an account name first (option 1)!\n")
+    return(account)
+  }
+
   print(account)
 
-  deposit_val <- get_valid_amount(prompt = "Deposit Amount: ")
+  display_currencies()
+  deposit_choice <- get_valid_choice(1, length(account$currencies), prompt = "Deposit Currency: ")
+  deposit_currency <- account$currencies[deposit_choice]
 
-  account <- deposit(account, deposit_val)
+  deposit_val <- get_valid_amount(prompt = "Deposit Amount: ")
+  php_val <- convert_curr(account, deposit_choice, 1, deposit_val)
+
+  account <- deposit(account, php_val)
 
   cat("\n***\n")
   cat(sprintf("Account Name = %s\n", account$name))
-  cat(sprintf("Deposit Amount = %.2f\n", deposit_val))
+  cat(sprintf("Deposit Amount = %.2f %s\n", deposit_val, deposit_currency))
+  cat(sprintf("Amount Credited = %.2f %s\n", php_val, account$currency))
   cat(sprintf("Updated Balance = %.2f\n", account$balance))
   return(account)
 }
@@ -251,11 +274,22 @@ deposit_amount <- function(account) {
 # @pre none
 withdraw_amount <- function(account) {
   cat("Withdraw Amount\n")
+
+  if (account$name == "Not Registered") {
+    cat("Please register an account name first (option 1)!\n")
+    return(account)
+  }
+
   print(account)
 
-  withdraw_val <- get_valid_amount(prompt = "Withdraw Amount: ")
+  display_currencies()
+  withdraw_choice <- get_valid_choice(1, length(account$currencies), prompt = "Withdraw Currency: ")
+  withdraw_currency <- account$currencies[withdraw_choice]
 
-  res <- withdraw(account, withdraw_val)
+  withdraw_val <- get_valid_amount(prompt = "Withdraw Amount: ")
+  php_val <- convert_curr(account, withdraw_choice, 1, withdraw_val)
+
+  res <- withdraw(account, php_val)
 
   if (!res$success) {
     cat("\n***\n")
@@ -266,7 +300,8 @@ withdraw_amount <- function(account) {
     account <- res$account
     cat("\n***\n")
     cat(sprintf("Account Name = %s\n", account$name))
-    cat(sprintf("Withdraw Amount = %.2f\n", withdraw_val))
+    cat(sprintf("Withdraw Amount = %.2f %s\n", withdraw_val, withdraw_currency))
+    cat(sprintf("Amount Debited = %.2f %s\n", php_val, account$currency))
     cat(sprintf("Updated Balance = %.2f\n", account$balance))
     return(account)
   }
@@ -277,24 +312,31 @@ withdraw_amount <- function(account) {
 # @return S3 'bank_account' object unchanged
 # @pre none
 currency_exchange <- function(account) {
-  cat("Foreign Currency Exchange\n")
-  display_currencies()
+  repeat {
+    cat("Foreign Currency Exchange\n")
+    display_currencies()
 
-  source_choice <- get_valid_choice(1, length(account$currencies), prompt = "Source Currency: ")
-  source_amount <- get_valid_amount(prompt = "Source Amount: ")
+    source_choice <- get_valid_choice(1, length(account$currencies), prompt = "Source Currency: ")
+    source_amount <- get_valid_amount(prompt = "Source Amount: ")
 
-  cat("\n\nExchanged Currency\n")
-  display_currencies()
+    cat("\n\nExchanged Currency\n")
+    display_currencies()
 
-  exchange_choice <- get_valid_choice(1, length(account$currencies), prompt = "Exchange Currency: ")
-  exchange_currency <- account$currencies[exchange_choice]
+    exchange_choice <- get_valid_choice(1, length(account$currencies), prompt = "Exchange Currency: ")
+    exchange_currency <- account$currencies[exchange_choice]
 
-  exchange_amount <- convert_curr(account, source_choice, exchange_choice, source_amount)
+    exchange_amount <- convert_curr(account, source_choice, exchange_choice, source_amount)
 
-  cat("\n***\n")
-  cat(sprintf("Source Amount: %.2f\n", source_amount))
-  cat(sprintf("Exchanged Currency: %s\n", exchange_currency))
-  cat(sprintf("Exchanged Amount: %.2f\n\n", exchange_amount))
+    cat("\n***\n")
+    cat(sprintf("Source Amount: %.2f\n", source_amount))
+    cat(sprintf("Exchanged Currency: %s\n", exchange_currency))
+    cat(sprintf("Exchanged Amount: %.2f\n\n", exchange_amount))
+
+    if (!convert_again()) {
+      break
+    }
+    cat("\n***\n")
+  }
   return(account)
 }
 
@@ -307,6 +349,10 @@ record_exchange_rates <- function(account) {
   display_currencies()
 
   foreign_choice <- get_valid_choice(1, length(account$currencies), prompt = "Select Foreign Currency (1-6): ")
+  while (foreign_choice == 1) {
+    cat("PHP is the base currency and its rate cannot be changed!\n")
+    foreign_choice <- get_valid_choice(1, length(account$currencies), prompt = "Select Foreign Currency (1-6): ")
+  }
   selected_currency <- account$currencies[foreign_choice]
   new_rate <- get_valid_amount(prompt = "Exchange Rate: ")
 
@@ -331,9 +377,12 @@ show_interest_amount <- function(account) {
 
   repeat {
     raw_days <- readline(prompt = "Total Number of Days: ")
-    days <- suppressWarnings(as.integer(gsub("[^0-9]", "", raw_days)))
-    if (!is.na(days) && days > 0) {
-      break
+    pattern <- "^\\s*([0-9]+)\\s*(days?)?\\s*$"
+    if (grepl(pattern, raw_days, ignore.case = TRUE)) {
+      days <- suppressWarnings(as.integer(sub(pattern, "\\1", raw_days, ignore.case = TRUE)))
+      if (!is.na(days) && days > 0) {
+        break
+      }
     }
     cat("Invalid Input. Please enter a valid positive number of days!\n")
   }
@@ -354,7 +403,7 @@ is_running <- TRUE
 
 while (is_running) {
   display_options()
-  choice <- get_valid_choice(1, 7)
+  choice <- get_valid_choice(1, 6)
   cat("\n***\n")
   
   account <- switch(choice,
@@ -363,15 +412,10 @@ while (is_running) {
     "3" = withdraw_amount(account),
     "4" = currency_exchange(account),
     "5" = record_exchange_rates(account),
-    "6" = show_interest_amount(account),
-    "7" = {
-      cat("Exiting The Program!\n")
-      is_running <- FALSE
-      account
-    }
+    "6" = show_interest_amount(account)
   )
 
-  if (is_running && !back_to_main_menu()) {
+  if (choice != 4 && !back_to_main_menu()) {
     is_running <- FALSE
   }
   cat("\n***\n")

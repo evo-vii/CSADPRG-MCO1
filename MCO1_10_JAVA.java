@@ -1047,6 +1047,13 @@ public class  MCO1_10_JAVA extends JFrame {
         JPanel p = makeScreen("INTEREST", false);
         addSubtitle(p, "BALANCE: " + walletText(currentAccount, walletIndex));
 
+        // the interest rate shown beside the annual interest label (design only)
+        JLabel rate = new JLabel("5%", SwingConstants.RIGHT);
+        rate.setForeground(darkGreen);
+        rate.setFont(new Font("SansSerif", Font.BOLD, 13));
+        rate.setBounds(150 + 165 - 50, 130 + 2, 42, 51);
+        p.add(rate);
+
         addMenuButton(p, "ANNUAL\nINTEREST", true, 150, 130, 165, 55, () -> askYears());
         addMenuButton(p, "DAILY\nINTEREST", true, 150, 215, 165, 55, () -> askDays());
 
