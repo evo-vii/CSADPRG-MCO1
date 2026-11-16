@@ -9,6 +9,7 @@
 
 // Pre-processor Directives
 import java.util.Scanner
+import java.io.*
 
 
 // Classes
@@ -157,6 +158,32 @@ class ExcRate (val code: String, val name: String, var rate: Double) {
 }
 
 /**
+ * This is the class which tracks the ongoing withdrawal and deposit transactions across accounts
+ */
+class DataControl (var currAcc: Account) {
+    
+    fun writeToFile(update: Int, type: String, bal: Int): Boolean {
+        
+        try {
+            
+           val fw: FileWriter = FileWriter("bank_transactions.csv", true)   
+           fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + "00/00/00" + "," + "00:00:00" + "," + update + "," + type + "," + bal)
+           fw.write("\n")
+           
+           fw.close()
+           
+        } catch (e: Exception) {
+            
+            System.out.println("Warning: File cannot be found!")
+            System.out.println("Logging of Transaction Unsuccesful")
+                
+        }
+        
+    }
+    
+}
+
+/**
  * This is the class which handles and controls all the transactions of the active account
  */
 class AccountCenter (var currAcc: Account) {
@@ -209,7 +236,7 @@ class AccountCenter (var currAcc: Account) {
      * @return a boolean stating if the admin is logged on or otherwise
      */
     fun checkAdmin(): Boolean {
-        if (currAcc.getAccNumb() != 1000) {
+        if (currAcc.getAccNumb() != 1000000000) {
             return false
         }
         return true
@@ -778,7 +805,7 @@ class AccountCenter (var currAcc: Account) {
                 callMenu(nChoice, sc)
 
             } else if (nChoice == 7) {
-                if (currAcc.getAccNumb() == 1000) {
+                if (currAcc.getAccNumb() == 1000000000) {
                     println("\nWarning: Invalid action for administrator account.")
                 } else if (closeAccount(sysCtrl, sc) == true){
                     println("\nAccount ${currAcc.getUsername()} closed.")
@@ -829,7 +856,7 @@ class SysControl {
         val ADMIN_NAME = "admin"
         val ADMIN_PASS = "2580"
     
-        val ADMIN_ACC = Account(1000, ADMIN_NAME, ADMIN_PASS)
+        val ADMIN_ACC = Account(1000000000, ADMIN_NAME, ADMIN_PASS)
         var accounts = mutableListOf(ADMIN_ACC)
         
         // Retrieves an account within the list given an index (n)
@@ -900,6 +927,7 @@ class SysControl {
         if (idx != -1) {
             accounts.removeAt(idx)
             numAccounts--
+            Account.numAccs--
         }
 
     }
@@ -989,7 +1017,7 @@ class SysControl {
         
         var pin4 = pinInput
         
-        val newAcc = Account(1000 + Account.numAccs, nAccName, pin4)
+        val newAcc = Account(1000000000 + Account.numAccs, nAccName, pin4)
         accounts.add(newAcc)
 
         println("\n***")
