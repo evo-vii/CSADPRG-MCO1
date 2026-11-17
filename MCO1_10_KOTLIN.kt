@@ -203,13 +203,8 @@ class AccountCenter (var currAcc: Account) {
         try {
             
             val fw: FileWriter = FileWriter("bank_transactions.csv", true)
-            if (type.compareTo("deposit") == 0) {
-                fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + LocalDateTime.now().format(formatterDay) + "," + LocalTime.now().format(formatterTime) + "," + currency + "," + "%.2f".format(update) + "," + type + "," + "%.2f".format(bal))
-                fw.write("\n")
-            } else if (type.compareTo("withdrawal") == 0) {
-                fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + LocalDateTime.now().format(formatterDay) + "," + LocalTime.now().format(formatterTime) + "," + currency + "," + "-" + "%.2f".format(update) + "," + type + "," + "%.2f".format(bal))
-                fw.write("\n")
-            }
+            fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + LocalDateTime.now().format(formatterDay) + "," + LocalTime.now().format(formatterTime) + "," + currency + "," + "%.2f".format(update) + "," + type + "," + "%.2f".format(bal))
+            fw.write("\n")
            
             fw.close()
            
