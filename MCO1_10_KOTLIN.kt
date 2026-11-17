@@ -159,50 +159,6 @@ class ExcRate (val code: String, val name: String, var rate: Double) {
     
 }
 
-// /**
-//  * This is the class which tracks the ongoing withdrawal and deposit transactions across accounts
-//  */
-// class DataControl (var currAcc: Account) {
-    
-    
-//     /**
-//      * Writes to the csv file containing all logged transactions done within the system
-//      * 
-//      * @param update pertains to the addition or deduction to the balance, type is the transaction type, bal is the balance of the account
-//      * @return a boolean value stating whether logging the transaction was successful or not
-//      */
-//     fun writeToFile(update: Int, type: String, bal: Int): Boolean {
-        
-//         val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
-//         val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-        
-//         try {
-            
-//             val fw: FileWriter = FileWriter("bank_transactions.csv", true)
-//             if (type.compareTo("deposit") == 0) {
-//                 fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + LocalDateTime.now().format(formatterDay) + "," + LocalTime.now().format(formatterTime) + "," + "%.2f".format(update) + "," + type + "," + "%.2f".format(bal))
-//                 fw.write("\n")
-//             } else if (type.compareTo("withdrawal") == 0) {
-//                 fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + LocalDateTime.now().format(formatterDay) + "," + LocalTime.now().format(formatterTime) + "," + "-" + "%.2f".format(update) + "," + type + "," + "%.2f".format(bal))
-//                 fw.write("\n")
-//             }
-           
-//             fw.close()
-           
-//             return true
-           
-//         } catch (e: Exception) {
-            
-//             System.out.println("Warning: File cannot be found!")
-//             System.out.println("Logging of Transaction Unsuccesful")
-                
-//             return false
-//         }
-        
-//     }
-    
-// }
-
 /**
  * This is the class which handles and controls all the transactions of the active account
  */
@@ -765,6 +721,11 @@ class AccountCenter (var currAcc: Account) {
         
     }
     
+    /*
+     * This is the menu for retrieving the account balance
+     * 
+     * @return NONE
+     */
     fun checkBalance() {
 
         println("\nCheck Balance")
@@ -772,7 +733,7 @@ class AccountCenter (var currAcc: Account) {
         println("Current Balance (PHP): %.2f".format(currAcc.getBal()))
 
     }
-
+    
     /**
      * @param sysCtrl is the SysControl Object passed for account management
      */
@@ -796,6 +757,125 @@ class AccountCenter (var currAcc: Account) {
         }
     }
     
+    
+    // Report Handling
+    
+    
+    /*
+     * Handles the generation of report 1
+     * 
+     * @return NONE
+     */
+    fun report1() {
+        
+        
+        
+    }
+    
+    /*
+     * Handles the generation of report 2
+     * 
+     * @return NONE
+     */
+    fun report2() {
+        
+    }
+    
+    /*
+     * Handles the generation of report 3
+     * 
+     * @return NONE
+     */
+    fun report3() {
+        
+    }
+    
+    /*
+     * Handles the generation of report 4
+     * 
+     * @return NONE
+     */
+    fun report4() {
+        
+    }
+    
+    /*
+     * A helper method facilitating the outputs after generating the reports
+     * 
+     * @return NONE
+     */
+    fun reportFlow() {
+        
+        // Generate Reports first
+        
+        // report1()
+        // report2()
+        // report3()
+        // report4()
+        
+        println("\nGenerating reports...")
+        println("Outputs saved to individual files...")
+        
+        println("\nReport 1: Banking Privilege Tiers")
+        // Insert CSV rows here...
+        println("\n(Full table exported to report1_banking_privilege_tiers.csv")
+        
+        println("\nReport 2: Interest Expense Projection")
+        // Insert CSV rows here...
+        println("\n(Full table exported to report2_interest_expense_projection.csv")
+        
+        println("\nReport 3: Suspicious Client Behavior")
+        // Insert CSV rows here...
+        println("\n(Full table exported to report3_suspicious_client_behavior.csv")
+        
+        println("\nReport 4: Custom Report")
+        // Insert CSV rows here...
+        println("\n(Full table exported to report4_custom_report.csv")
+        
+        println("\nSummary State (summary.json):")
+        // Insert .json display code here...
+        
+    }
+    
+    /*
+     * This is the menu for generating the system reports of the banking application
+     * 
+     * @param sc is the scanner object allowing for basic input
+     * @return NONE
+     */
+    fun genReports(sc: Scanner) {
+        
+        var currChoice = 0
+        
+        println("\nGenerate Reports")
+        println("\n[1] Load the file")
+        println("[2] Generate Reports")
+        
+        print("\nEnter choice: ")
+        
+        try {
+            currChoice = sc.nextInt()
+            
+            if (currChoice != 1 && currChoice != 2) {
+                println("Warning: Input unrecognized, returning to main menu!")
+                return
+            }
+            
+        } catch (e: Exception) {
+            println("Warning: Input unrecognized, returning to main menu!")
+        }
+        
+        if (currChoice == 1) {
+            println("\nLoad file feature TBD")
+        } else if (currChoice == 2) {
+            reportFlow()
+        }
+    }
+    
+    
+    // Menu Management
+    
+    
     /*
      * Calls the respective menu given the user input
      * 
@@ -817,6 +897,8 @@ class AccountCenter (var currAcc: Account) {
             presentInterest(sc)
         } else if (nSelection == 6) {
             checkBalance()
+        } else if (nSelection == 7) {
+            genReports(sc)
         }
         
     }
@@ -839,8 +921,9 @@ class AccountCenter (var currAcc: Account) {
         println("\n[4] Record Exchange Rates")
         println("\n[5] Show Interest Amount")
         println("\n[6] Check Balance")
-        println("\n[7] Close Account")
-        println("\n[8] Log Out")
+        println("\n[7] Generate Reports")
+        println("\n[8] Close Account")
+        println("\n[9] Log Out")
         println("\n========================================\n")
         
         print("\n>> ")
@@ -860,17 +943,17 @@ class AccountCenter (var currAcc: Account) {
         
         if (excepted == false) {
             
-            if (nChoice == 1 || nChoice == 2 || nChoice == 3 || nChoice == 4 || nChoice == 5 || nChoice == 6) {
+            if (nChoice == 1 || nChoice == 2 || nChoice == 3 || nChoice == 4 || nChoice == 5 || nChoice == 6 || nChoice == 7) {
                 callMenu(nChoice, sc)
 
-            } else if (nChoice == 7) {
+            } else if (nChoice == 8) {
                 if (currAcc.getAccNumb() == 1000000000) {
                     println("\nWarning: Invalid action for administrator account.")
                 } else if (closeAccount(sysCtrl, sc) == true){
                     println("\nAccount ${currAcc.getUsername()} closed.")
                     logoutPass = true
                 }
-            } else if (nChoice == 8){
+            } else if (nChoice == 9){
                 println("\nLogging out of the system.")
                 logoutPass = true
             } else {
