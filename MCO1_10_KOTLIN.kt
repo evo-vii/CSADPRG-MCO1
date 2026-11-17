@@ -10,7 +10,9 @@
 // Pre-processor Directives
 import java.util.Scanner
 import java.io.*
-
+import java.util.*
+import java.time.*
+import java.time.format.*
 
 // Classes
 
@@ -157,31 +159,49 @@ class ExcRate (val code: String, val name: String, var rate: Double) {
     
 }
 
-/**
- * This is the class which tracks the ongoing withdrawal and deposit transactions across accounts
- */
-class DataControl (var currAcc: Account) {
+// /**
+//  * This is the class which tracks the ongoing withdrawal and deposit transactions across accounts
+//  */
+// class DataControl (var currAcc: Account) {
     
-    fun writeToFile(update: Int, type: String, bal: Int): Boolean {
+    
+//     /**
+//      * Writes to the csv file containing all logged transactions done within the system
+//      * 
+//      * @param update pertains to the addition or deduction to the balance, type is the transaction type, bal is the balance of the account
+//      * @return a boolean value stating whether logging the transaction was successful or not
+//      */
+//     fun writeToFile(update: Int, type: String, bal: Int): Boolean {
         
-        try {
+//         val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
+//         val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        
+//         try {
             
-           val fw: FileWriter = FileWriter("bank_transactions.csv", true)   
-           fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + "00/00/00" + "," + "00:00:00" + "," + update + "," + type + "," + bal)
-           fw.write("\n")
+//             val fw: FileWriter = FileWriter("bank_transactions.csv", true)
+//             if (type.compareTo("deposit") == 0) {
+//                 fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + LocalDateTime.now().format(formatterDay) + "," + LocalTime.now().format(formatterTime) + "," + "%.2f".format(update) + "," + type + "," + "%.2f".format(bal))
+//                 fw.write("\n")
+//             } else if (type.compareTo("withdrawal") == 0) {
+//                 fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + LocalDateTime.now().format(formatterDay) + "," + LocalTime.now().format(formatterTime) + "," + "-" + "%.2f".format(update) + "," + type + "," + "%.2f".format(bal))
+//                 fw.write("\n")
+//             }
            
-           fw.close()
+//             fw.close()
            
-        } catch (e: Exception) {
+//             return true
+           
+//         } catch (e: Exception) {
             
-            System.out.println("Warning: File cannot be found!")
-            System.out.println("Logging of Transaction Unsuccesful")
+//             System.out.println("Warning: File cannot be found!")
+//             System.out.println("Logging of Transaction Unsuccesful")
                 
-        }
+//             return false
+//         }
         
-    }
+//     }
     
-}
+// }
 
 /**
  * This is the class which handles and controls all the transactions of the active account
@@ -211,6 +231,43 @@ class AccountCenter (var currAcc: Account) {
     
     
     // Helper Functions
+    
+    
+    /**
+     * Writes to the csv file containing all logged transactions done within the system
+     * 
+     * @param update pertains to the addition or deduction to the balance, type is the transaction type, bal is the balance of the account
+     * @return a boolean value stating whether logging the transaction was successful or not
+     */
+    fun writeToFile(update: Double, type: String, bal: Double, currency: String): Boolean {
+        
+        val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
+        val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        
+        try {
+            
+            val fw: FileWriter = FileWriter("bank_transactions.csv", true)
+            if (type.compareTo("deposit") == 0) {
+                fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + LocalDateTime.now().format(formatterDay) + "," + LocalTime.now().format(formatterTime) + "," + currency + "," + "%.2f".format(update) + "," + type + "," + "%.2f".format(bal))
+                fw.write("\n")
+            } else if (type.compareTo("withdrawal") == 0) {
+                fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + LocalDateTime.now().format(formatterDay) + "," + LocalTime.now().format(formatterTime) + "," + currency + "," + "-" + "%.2f".format(update) + "," + type + "," + "%.2f".format(bal))
+                fw.write("\n")
+            }
+           
+            fw.close()
+           
+            return true
+           
+        } catch (e: Exception) {
+            
+            System.out.println("Warning: File cannot be found!")
+            System.out.println("Logging of Transaction Unsuccesful")
+                
+            return false
+        }
+        
+    }
     
     /*
      * Validates if an input is not empty
@@ -353,7 +410,7 @@ class AccountCenter (var currAcc: Account) {
             currAcc.deposit(convertedVal)
         }
         
-        
+        writeToFile(convertedVal, "deposit", currAcc.getBal(), "PHP")
         
         println("\n***")
         println("Account Name: ${currAcc.getUsername()}")
@@ -423,6 +480,8 @@ class AccountCenter (var currAcc: Account) {
                 return 
             }
         }
+        
+        writeToFile(convertedVal, "withdrawal", currAcc.getBal(), "PHP")
         
         println("\n***")
         println("Account Name: ${currAcc.getUsername()}")
