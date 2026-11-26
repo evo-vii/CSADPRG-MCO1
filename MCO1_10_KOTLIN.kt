@@ -13,7 +13,7 @@ import java.io.*
 import java.util.*
 import java.time.*
 import java.time.format.*
-
+    
 // Classes
 
 
@@ -109,6 +109,85 @@ class Account (var accNum: Int, var name: String, var pin: String) {
 }
 
 /**
+ * This is a tuple data type simulated via a class and is specially modified to accept values
+ * from the bank_transactions.csv file.
+ */
+class recordTuple (var accName: String, var accNumber: Int, var trnscDate: LocalDateTime, var time: LocalTime, var curr: String, var diff: Double, var tType: String, var currBal: Double) {
+    
+    /**
+     * Retrieves the account name
+     * 
+     * @return the account name
+     */
+    fun getUsername(): String {
+        return accName
+    }
+    
+    /**
+     * Retrieves the account number
+     * 
+     * @return the account number
+     */
+    fun getAccNumb(): Int {
+        return accNumber
+    }
+    
+    /**
+     * Retrieves the date of transaction
+     * 
+     * @return the date of transaction
+     */
+    fun getTimeDate(): LocalDateTime {
+        return trnscDate
+    }
+    
+    /**
+     * Retrieves the time in HH/MM/SS format
+     * 
+     * @return the hour/minute/second time
+     */
+    fun getTimeMin(): LocalTime {
+        return time
+    }
+    
+    /**
+     * Retrieves the currency code
+     * 
+     * @return the currency code
+     */
+    fun getCurrCode(): String {
+        return curr
+    }
+    
+    /**
+     * Retrieves the transacted amount
+     * 
+     * @return the transacted amount
+     */
+    fun getMoneyDiff(): Double {
+        return diff
+    }
+    
+    /**
+     * Retrieves the transaction type
+     * 
+     * @return the transaction type
+     */
+    fun getType(): String {
+        return tType
+    }
+    
+    /**
+     * Retrieves the current balance
+     * 
+     * @return the current balance
+     */
+    fun getBall(): Double {
+        return currBal
+    }
+}
+
+/**
  * This is the class that acts as a template for each object representation of
  * a currency's details.
  */
@@ -158,6 +237,69 @@ class ExcRate (val code: String, val name: String, var rate: Double) {
     }
     
 }
+
+/**
+ * This is the class which handles all data management, extraction and filtering functions
+ */
+class DataManagement() {
+    
+    companion object {
+        val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
+        val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        
+        var listTuple: recordTuple = recordTuple("Null", 0, LocalDateTime.parse("00/00/00", formatterDay), LocalTime.parse("00:00:00", formatterTime), "PHP", 0.0, "null", 0.0 )
+        var records = mutableListOf("FirstString")
+        
+        
+        fun parseRow(r: String) {
+            
+            var recArr = []
+            
+            recArr.add(r.substringBefore(r.indexOf(",")))
+            println(recArr[0])
+            
+            
+        }
+        
+        fun readfile(): Boolean {
+            
+            var nullFlag = false
+            
+            try {
+            
+                val br: BufferedReader = BufferedReader(FileReader("bank_transactions.csv"))
+                
+                while(nullFlag == false) {
+                    var temp = br.readLine()
+                    
+                    if (temp == null) {
+                        nullFlag = false
+                        break
+                    }
+                    
+                    print(temp + "\n")
+                    
+                    records.add(temp)
+                }
+                br.close()
+           
+                return true
+           
+            } catch (e: Exception) {
+
+                e.printStackTrace()
+                System.out.println("Warning: File cannot be found!")
+                System.out.println("Logging of Transaction Unsuccesful")
+                
+                return false
+            }
+            
+        }
+        
+    }
+    
+}
+
 
 /**
  * This is the class which handles and controls all the transactions of the active account
@@ -763,7 +905,29 @@ class AccountCenter (var currAcc: Account) {
      */
     fun report1() {
         
+        val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
+        val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        var excpPass = false
         
+        try {
+            
+            val fw: FileWriter = FileWriter("report1_banking_privilege_tiers.csv", true)
+            fw.write("AccountName" + "," + "AccountAge" + "," + "CurrentBalance" + "," + "AverageDailyBalance" + "," + "PrivilegeTier")
+            fw.write("\n")
+           
+            excpPass = true
+            
+            fw.close()
+           
+        } catch (e: Exception) {
+            
+            System.out.println("Warning: File cannot be written!")
+            System.out.println("Generation of Report Unsuccesful")
+        }
+        
+        if (excpPass == false) {
+            return
+        }
         
     }
     
@@ -1089,7 +1253,9 @@ class SysControl {
     
         
     // Core Methods
-        
+    
+    
+    
     
     /*
      * Allows a user to register an account given a name, and pin
@@ -1099,8 +1265,7 @@ class SysControl {
      */
     fun regAcc(sc: Scanner) {
         
-        // Debug
-        // numAccounts = MAX_ACC+1 
+        var depositIn = 0.0 
         
         // First Layer Checks (Account Capacity)
         if (numAccounts >= MAX_ACC) {
@@ -1156,6 +1321,26 @@ class SysControl {
         
         val newAcc = Account(1000000000 + Account.numAccs, nAccName, pin4)
         accounts.add(newAcc)
+        
+        print("\nInitial Deposit (min. Php 5000, This is a required field): ")
+        
+        try {
+            depositIn = sc.nextDouble()
+            
+        } catch (e: Exception) {
+            println("\nWarning: Input may not be a number!")
+            println("\nDeposit Failed! Please try again!")
+            sc.nextLine()
+            return
+        } 
+        
+        if (depositIn < 5000.0) {
+            println("Warning: Initial deposit is lower than minimum!")
+            return
+        } else {
+            newAcc.deposit(depositIn)
+            println("\nSuccessfully made an initial deposit!")
+        }
 
         println("\n***")
         println("Account under \"$nAccName\" successfully created!")
