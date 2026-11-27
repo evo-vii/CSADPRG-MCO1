@@ -13,6 +13,7 @@ import java.io.*
 import java.util.*
 import java.time.*
 import java.time.format.*
+import java.time.temporal.ChronoUnit
     
 // Classes
 
@@ -123,7 +124,7 @@ class Account (var accNum: Int, var name: String, var pin: String, var creaTime:
  * This is a tuple data type simulated via a class and is specially modified to accept values
  * from the bank_transactions.csv file.
  */
-class recordTuple (var accName: String, var accNumber: Int, var trnscDate: LocalDateTime, var time: LocalTime, var curr: String, var diff: Double, var tType: String, var currBal: Double) {
+class recordTuple (var accName: String, var accNumber: Int, var trnscDate: LocalDateTime, var curr: String, var diff: Double, var tType: String, var currBal: Double) {
     
     /**
      * Retrieves the account name
@@ -150,15 +151,6 @@ class recordTuple (var accName: String, var accNumber: Int, var trnscDate: Local
      */
     fun getTimeDate(): LocalDateTime {
         return trnscDate
-    }
-    
-    /**
-     * Retrieves the time in HH/MM/SS format
-     * 
-     * @return the hour/minute/second time
-     */
-    fun getTimeMin(): LocalTime {
-        return time
     }
     
     /**
@@ -195,6 +187,31 @@ class recordTuple (var accName: String, var accNumber: Int, var trnscDate: Local
      */
     fun getBall(): Double {
         return currBal
+    }
+}
+
+/**
+ * This is the class that acts as a primary key for all unique transactions to users.
+ * NOTE: AI-REFINED AND ASSISTED
+ */
+data class DM_PrimaryKey (val name: String, val num: Int) {
+    
+    /**
+     * Retrieves the account name
+     * 
+     * @return the account name
+     */
+    fun getAName(): String {
+        return name
+    }
+    
+    /**
+     * Retrieves the account number
+     * 
+     * @return the account number
+     */
+    fun getANum(): Int {
+        return num
     }
 }
 
@@ -258,17 +275,40 @@ class DataManagement() {
         val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
         val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
         
-        var listTuple = mutableListOf<recordTuple>()
-        var records = mutableListOf("FirstString")
+        val formatterAbs = DateTimeFormatter.ofPattern("dd/MM/yyyy H:mm:ss")
         
+        var listTuple = mutableListOf<recordTuple>()        
+        var records = mutableListOf<String>()
         
+        var rowDiscrepancies = 0
+        var totalRows = 0
+        var nonPHP = 0
+        
+        /**
+         * Attempts to gather the distinct transactions together
+         * NOTE: AI-REFINED AND ASSISTED
+         * 
+         * @return NONE
+         */
+        fun findDistinct(): Map<DM_PrimaryKey, List<recordTuple>> {
+            return listTuple.filter{ it.getType() != "InvalidRow"}.groupBy({row -> DM_PrimaryKey(row.getUsername(), row.getAccNumb())})
+        }
+        
+        /**
+         * Parses each row and loads elements to a tuple class
+         * 
+         * @param r - the string form of the csv row
+         * @return NONE
+         */
         fun parseRow(r: String) {
             
             var recSplit = r.split(",")
-            println(recSplit)
             
             if (recSplit.size < 8) {
                 println("Warning! This record is incomplete!")
+                listTuple.add(recordTuple("InvalidRow", 1050000000, LocalDateTime.now(), "PHP", 0.0, "InvalidRow", 0.0))
+                rowDiscrepancies++
+                totalRows++
                 return
             }
             
@@ -276,10 +316,13 @@ class DataManagement() {
             
             var accNum = recSplit[1].toInt()
             
-            var dateDMY = LocalDateTime.parse(recSplit[2], formatterDay)
+            var dateABS = LocalDateTime.parse(recSplit[2] + " " + recSplit[3], formatterAbs)
             
-            var dateHMS = LocalTime.parse(recSplit[3], formatterDay)
-            
+            if (recSplit[4] != "PHP") {
+                listTuple.add(recordTuple("InvalidRow", 1050000000, LocalDateTime.now(), "PHP", 0.0, "InvalidRow", 0.0))
+                nonPHP++
+                totalRows++
+            }
             var curr = recSplit[4]
             
             var diff = recSplit[5].toDouble()
@@ -288,9 +331,15 @@ class DataManagement() {
             
             var bal = recSplit[7].toDouble()
             
-            listTuple.add(recordTuple(name, accNum, dateDMY, dateHMS, curr, diff, type, bal))
+            totalRows++
+            listTuple.add(recordTuple(name, accNum, dateABS, curr, diff, type, bal))
         }
         
+        /**
+         * Reads the csv file of transactions
+         * 
+         * @return tells whether reading the file was successful or not
+         */
         fun readfile(): Boolean {
             
             var nullFlag = false
@@ -306,8 +355,6 @@ class DataManagement() {
                         nullFlag = false
                         break
                     }
-                    
-                    print(temp + "\n")
                     
                     records.add(temp)
                 }
@@ -329,7 +376,6 @@ class DataManagement() {
     }
     
 }
-
 
 /**
  * This is the class which handles and controls all the transactions of the active account
@@ -491,6 +537,7 @@ class AccountCenter (var currAcc: Account) {
     fun deposit(sc: Scanner) {
         
         var depositIn = 0.0
+        var overseasTag = false
         
         println("\nDeposit Amount")
         println("Account Name: ${currAcc.getUsername()}")
@@ -531,9 +578,14 @@ class AccountCenter (var currAcc: Account) {
         } else {
             convertedVal = reverseConversion(depositIn, checkCurrency(currChoice))
             currAcc.deposit(convertedVal)
+            overseasTag = true
         }
         
         writeToFile(convertedVal, "deposit", currAcc.getBal(), "PHP")
+        
+        if (overseasTag == true) {
+            currAcc.numOfOverseasTrans++
+        }
         
         println("\n***")
         println("Account Name: ${currAcc.getUsername()}")
@@ -555,6 +607,7 @@ class AccountCenter (var currAcc: Account) {
     fun withdraw(sc: Scanner) {
         
         var withdrawIn = 0.0
+        var overseasTag = false
         
         println("\nWithdraw Amount")
         println("Account Name: ${currAcc.getUsername()}")
@@ -602,9 +655,14 @@ class AccountCenter (var currAcc: Account) {
                 println("Withdraw Failed! Insufficient Funds!")
                 return 
             }
+            overseasTag = true
         }
         
         writeToFile(convertedVal, "withdrawal", currAcc.getBal(), "PHP")
+        
+        if (overseasTag == true) {
+            currAcc.numOfOverseasTrans++
+        }
         
         println("\n***")
         println("Account Name: ${currAcc.getUsername()}")
@@ -930,47 +988,95 @@ class AccountCenter (var currAcc: Account) {
     
     /*
      * Calculates average daily balance
+     * NOTE: AI-REFINED AND ASSISTED
      * 
      * @return NONE
      */
-    fun calcADB(a: Account): Int {
+    fun calcADB(tuples: List<recordTuple>): Double {
         
-        val JAN = 31
-        val FEB = 28
-        val MAR = 31
-        val APR = 30
-        val MAY = 31
-        val JUN = 30
-        val JUL = 31
-        val AUG = 31
-        val SEP = 30
-        val OCT = 31
-        val NOV = 30
-        val DEC = 31
+        if (tuples.isEmpty()) {
+            return 0.0
+        }
         
-        return 0
+        // Sorted by date
+        val sorted = tuples.sortedBy { it.getTimeDate() }
+        
+        // Returns just the balance due to no additional balances to average.
+        if (sorted.size == 1) {
+            return sorted.first().getBall()
+        }
+
+        var weightedBalanceSum = 0.0
+        var totalDays = 0L
+
+        for (i in 0 until sorted.size - 1) {
+            val current = sorted[i]
+            val next = sorted[i + 1]
+
+            val startDay = current.getTimeDate().toLocalDate()
+            val endDay = next.getTimeDate().toLocalDate()
+            val daysActive = ChronoUnit.DAYS.between(startDay, endDay).coerceAtLeast(0L)
+
+            weightedBalanceSum += current.getBall() * daysActive
+            totalDays += daysActive
+        }
+
+        // Include the final transaction's balance for at least 1 day (or through the end of its month)
+        val lastTuple = sorted.last()
+        val lastDate = lastTuple.getTimeDate().toLocalDate()
+        val endOfLastMonth = YearMonth.from(lastDate).atEndOfMonth()
+        val remainingDaysInMonth = ChronoUnit.DAYS.between(lastDate, endOfLastMonth).coerceAtLeast(1L)
+
+        weightedBalanceSum += lastTuple.getBall() * remainingDaysInMonth
+        totalDays += remainingDaysInMonth
+
+        return if (totalDays > 0L) weightedBalanceSum / totalDays else lastTuple.getBall()
     }
     
     /*
      * Handles the generation of report 1
+     * NOTE: AI-REFINED AND ASSISTED
      * 
      * @return NONE
      */
     fun report1() {
         
+        val groupedUsers: Map<DM_PrimaryKey, List<recordTuple>> = DataManagement.findDistinct()
+        
         val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
         val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
         var excpPass = false
         
         try {
             
-            val fw: FileWriter = FileWriter("report1_banking_privilege_tiers.csv")
-            fw.write("AccountName" + "," + "AccountAge" + "," + "CurrentBalance" + "," + "AverageDailyBalance" + "," + "PrivilegeTier")
-            fw.write("\n")
-           
-            excpPass = true
-            
-            fw.close()
+            FileWriter("report1_banking_privilege_tiers.csv").use { fw ->
+            fw.write("AccountName,AccountAge,CurrentBalance,AverageDailyBalance,PrivilegeTier\n")
+
+            for ((userKey, userTuples) in groupedUsers) {
+                if (userTuples.isEmpty()) continue
+
+                val sortedTuples = userTuples.sortedBy { it.getTimeDate() }
+                val firstDate = sortedTuples.first().getTimeDate()
+                val lastDate = sortedTuples.last().getTimeDate()
+                val accountAgeDays = java.time.temporal.ChronoUnit.DAYS.between(firstDate, lastDate)
+
+                val currentBal = sortedTuples.last().getBall()
+                val adb = calcADB(sortedTuples)
+                
+                var privTier: String
+                
+                if (adb < 500000.0) {
+                    privTier = "Silver"
+                } else if (adb < 1000000.0) {
+                    privTier = "Gold"
+                } else
+                    privTier = "Platinum"
+
+                fw.write(
+                    "${userKey.getAName()},$accountAgeDays,${"%.2f".format(currentBal)},${"%.2f".format(adb)},$privTier\n"
+                )
+            }
+        }
            
         } catch (e: Exception) {
             
@@ -981,35 +1087,18 @@ class AccountCenter (var currAcc: Account) {
         if (excpPass == false) {
             return
         }
-        
-        var i = 0
-        val fw: FileWriter = FileWriter("report1_banking_privilege_tiers.csv", true)
-        
-        while (i < SysControl.accounts.size) {
-            
-            if (calcADB() < 500000) {
-                var privTier = "Silver"
-            } else if (calcADB() < 1000000) {
-                var privTier = "Gold"
-            } else {
-                var privTier = "Platinum"
-            }
-            
-            //fw.write(SysControl.accounts.get(i).getUsername() + "," + SysControl.accounts.get(i).numOfOverseasTrans)
-            fw.write("\n")
-            i++
-        }
-        
-        fw.close()
         
     }
     
     /*
      * Handles the generation of report 2
+     * NOTE: AI-REFINED AND ASSISTED
      * 
      * @return NONE
      */
     fun report2() {
+        
+        val groupedUsers: Map<DM_PrimaryKey, List<recordTuple>> = DataManagement.findDistinct()
         
         val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
         val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
@@ -1017,13 +1106,34 @@ class AccountCenter (var currAcc: Account) {
         
         try {
             
-            val fw: FileWriter = FileWriter("report2_interest_expense_projection.csv")
-            fw.write("AccountName" + "," +  "CurrentBalance" + "," + "ExpectedInterest")
-            fw.write("\n")
-           
-            excpPass = true
-            
-            fw.close()
+            FileWriter("report2_interest_expense_projection.csv").use { fw ->
+            fw.write("AccountName,CurrentBalance,ExpectedInterest\n")
+
+            for ((userKey, userTuples) in groupedUsers) {
+                if (userTuples.isEmpty()) continue
+
+                val sortedTuples = userTuples.sortedBy { it.getTimeDate() }
+                val currentBal = sortedTuples.last().getBall()
+
+                val startBal = Math.round(currentBal * 100) / 100.0
+                var sumBal = startBal
+                var dailyInterest: Double
+                var ctr = 1
+
+                // Uses more or less the old logic from the displaying of interest in the app
+                do {
+                    dailyInterest = Math.round(sumBal * (INTEREST / 365.0) * 100) / 100.0
+                    sumBal = Math.round((sumBal + dailyInterest) * 100) / 100.0
+                    ctr++
+                } while (ctr <= 30)
+
+                val interestEarned30Days = sumBal - startBal
+
+                fw.write(
+                    "${userKey.getAName()},${"%.2f".format(currentBal)},${"%.2f".format(interestEarned30Days)}\n"
+                )
+            }
+            }
            
         } catch (e: Exception) {
             
@@ -1035,28 +1145,7 @@ class AccountCenter (var currAcc: Account) {
             return
         }
         
-        var i = 0
-        val fw: FileWriter = FileWriter("report2_interest_expense_projection.csv", true)
         
-        while (i < SysControl.accounts.size) {
-            
-            var sumBal = Math.round(SysControl.accounts.get(i).getBal()*100)/100.0
-            var dailyInterest = 0.0
-            var ctr = 1
-
-            do {
-                dailyInterest = Math.round(sumBal*(INTEREST/365)*100)/100.0
-                sumBal = Math.round((sumBal + dailyInterest)*100)/100.0
-                println("%-5d".format(ctr) + " | %-14.2f".format(dailyInterest) + " | %-16.2f".format(sumBal) + " |")
-                ctr++
-            } while (ctr <= 30)
-            
-            fw.write(SysControl.accounts.get(i).getUsername() + "," + SysControl.accounts.get(i).getBal() + "," + "%.2f".format(sumBal - SysControl.accounts.get(i).getBal()))
-            fw.write("\n")
-            i++
-        }
-        
-        fw.close()
         
     }
     
@@ -1067,19 +1156,58 @@ class AccountCenter (var currAcc: Account) {
      */
     fun report3() {
         
-        val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
+        val groupedUsers: Map<DM_PrimaryKey, List<recordTuple>> = DataManagement.findDistinct()
         val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
         var excpPass = false
         
         try {
             
-            val fw: FileWriter = FileWriter("report3_suspicious_client_behavior.csv")
-            fw.write("AccountName" + "," + "Date" + "," + "TotalWithdrawalAmounts" + "," + "NumberOfDeposits" + "," + "TotalDepositAmounts" + "," + "TurnoverVelocity" + "RiskFlagLevel")
-            fw.write("\n")
-           
-            excpPass = true
-            
-            fw.close()
+            FileWriter("report3_suspicious_client_behavior.csv").use { fw ->
+            fw.write("AccountName,Date,TotalWithdrawalAmounts,NumberOfDeposits,TotalDepositAmounts,RiskFlagLevel\n")
+
+            for ((userKey, userTuples) in groupedUsers) {
+                if (userTuples.isEmpty()) continue
+
+                
+                val byDay = userTuples
+                    .sortedBy { it.getTimeDate() }
+                    .groupBy { it.getTimeDate().toLocalDate() }
+
+                for ((day, dayTuples) in byDay) {
+                    
+                    // Logs withdrawal and deposit records within data structures
+                    val totalWithdrawals = dayTuples
+                        .filter { it.getType().equals("withdrawal", ignoreCase = true) }
+                        .sumOf { it.getMoneyDiff() }
+
+                    val dayDeposits = dayTuples
+                        .filter { it.getType().equals("deposit", ignoreCase = true) }
+
+                    // Number of deposits is the size of that structure
+                    val numDeposits = dayDeposits.size
+                    val totalDeposits = dayDeposits.sumOf { it.getMoneyDiff() }
+
+                    val turnoverVelocity = if (totalDeposits > 0.0) {
+                        (totalWithdrawals / totalDeposits) * 100.0
+                    } else {
+                        0.0
+                    }
+
+                    // Simple branching for risk flag level assessment
+                    val riskFlagLevel = if (totalWithdrawals >= 500000.0 || turnoverVelocity >= 90.0) {
+                        "Suspicious"
+                    } else {
+                        "Normal"
+                    }
+
+                    val formattedDate = day.format(formatterDay)
+
+                    fw.write(
+                        "${userKey.getAName()},$formattedDate,${"%.2f".format(totalWithdrawals)},$numDeposits,${"%.2f".format(totalDeposits)},$riskFlagLevel\n"
+                    )
+                }
+            }
+        }
            
         } catch (e: Exception) {
             
@@ -1090,18 +1218,6 @@ class AccountCenter (var currAcc: Account) {
         if (excpPass == false) {
             return
         }
-        
-        var i = 0
-        val fw: FileWriter = FileWriter("report3_suspicious_client_behavior.csv", true)
-        
-        while (i < SysControl.accounts.size) {
-            //fw.write(SysControl.accounts.get(i).getUsername() + "," + SysControl.accounts.get(i).numOfOverseasTrans)
-            fw.write("\n")
-            i++
-        }
-        
-        fw.close()
-        
     }
     
     /*
@@ -1157,9 +1273,9 @@ class AccountCenter (var currAcc: Account) {
         
         // Generate Reports first
         
-        // report1()
+        report1()
         report2()
-        // report3()
+        report3()
         report4()
         
         println("\nGenerating reports...")
@@ -1215,7 +1331,15 @@ class AccountCenter (var currAcc: Account) {
         }
         
         if (currChoice == 1) {
-            println("\nLoad file feature TBD")
+            DataManagement.readfile()
+            
+            var i = 0
+            do {
+                i++
+                DataManagement.parseRow(DataManagement.records[i])
+                print(DataManagement.records[i] + "\n")
+            } while (i < DataManagement.records.size - 1);
+            
         } else if (currChoice == 2) {
             reportFlow()
         }
@@ -1443,10 +1567,29 @@ class SysControl {
         
     }
     
+    /*
+     * Retrieves account number for newly made account
+     * 
+     * @return NONE
+     */
+    fun getNewAccNumber(): Int {
+        
+       var i = 0
+       var numList = mutableListOf<Int>()
+       
+       do {
+          numList.add(DataManagement.listTuple[i].getAccNumb())
+          i++
+       }
+       while(i < DataManagement.listTuple.size) 
+    
+       var retVal = numList.max() + 1
+       
+       return retVal
+    }
+    
         
     // Core Methods
-    
-    
     
     
     /*
@@ -1510,8 +1653,14 @@ class SysControl {
         }
         
         var pin4 = pinInput
+        var newAcc: Account
         
-        val newAcc = Account(1000000000 + Account.numAccs, nAccName, pin4, LocalDateTime.now())
+        if (DataManagement.listTuple.size == 0) {
+            newAcc = Account(1000000000 + Account.numAccs, nAccName, pin4, LocalDateTime.now())
+        } else {
+            newAcc = Account(getNewAccNumber(), nAccName, pin4, LocalDateTime.now())
+        }
+        
         accounts.add(newAcc)
         
         print("\nInitial Deposit (min. Php 5000, This is a required field): ")
