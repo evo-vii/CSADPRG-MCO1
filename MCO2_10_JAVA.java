@@ -3241,7 +3241,7 @@ class Report1BankingPrivilegeTiers implements ReportGenerator {
 
     // the file the report is saved to
     public String getOutputFileName() {
-        return "report1_banking_privilege_tiers.csv";
+        return "Report1.csv";
     }
 
     // builds the report, saves the full table to its file and returns the table for the preview
@@ -3343,7 +3343,7 @@ class Report2InterestExpenseProjection implements ReportGenerator {
 
     // the file the report is saved to
     public String getOutputFileName() {
-        return "report2_interest_expense_projection.csv";
+        return "Report2.csv";
     }
 
     // builds the report, saves the full table to its file and returns the table for the preview
@@ -3414,7 +3414,7 @@ class Report3SuspiciousClientBehavior implements ReportGenerator {
 
     // the file the report is saved to
     public String getOutputFileName() {
-        return "report3_suspicious_client_behavior.csv";
+        return "Report3.csv";
     }
 
     // builds the report, saves the full table to its file and returns the table for the preview
@@ -3510,7 +3510,7 @@ class Report4DormantAccounts implements ReportGenerator {
 
     // the file the report is saved to
     public String getOutputFileName() {
-        return "report4_dormant_accounts.csv";
+        return "Report4.csv";
     }
 
     // builds the report, saves the full table to its file and returns the table for the preview
