@@ -190,6 +190,44 @@ class recordTuple (var accName: String, var accNumber: Int, var trnscDate: Local
     }
 }
 
+/*
+ * A dedicated private class for row objects
+ * NOTE: AI-ASSISTED
+ * 
+ */
+private data class Report1Row(
+    val accountName: String,
+    val accountAgeDays: Long,
+    val currentBalance: Double,
+    val adb: Double,
+    val privilegeTier: String
+)
+
+/*
+ * A dedicated private class for row objects
+ * NOTE: AI-ASSISTED
+ * 
+ */
+private data class Report2Row(
+    val accountName: String,
+    val currentBalance: Double,
+    val expectedInterest: Double
+)
+
+/*
+ * A dedicated private class for row objects
+ * NOTE: AI-ASSISTED
+ * 
+ */
+private data class Report3Row(
+        val accountName: String,
+        val date: LocalDate,
+        val totalWithdrawals: Double,
+        val numDeposits: Int,
+        val totalDeposits: Double,
+        val riskFlagLevel: String
+    )
+
 /**
  * This is the class that acts as a primary key for all unique transactions to users.
  * NOTE: AI-REFINED AND ASSISTED
@@ -305,7 +343,6 @@ class DataManagement() {
             var recSplit = r.split(",")
             
             if (recSplit.size < 8) {
-                println("Warning! This record is incomplete!")
                 listTuple.add(recordTuple("InvalidRow", 1050000000, LocalDateTime.now(), "PHP", 0.0, "InvalidRow", 0.0))
                 rowDiscrepancies++
                 totalRows++
@@ -387,6 +424,9 @@ class AccountCenter (var currAcc: Account) {
         // Initializing the exchange rates
         val rates = mutableListOf(ExcRate("PHP", "Philippine Peso", 1.00))
         val holding = mutableListOf<Account>()
+        
+        var isFileLoaded = false
+        
         /**
          * Initializes the currency objects to its default exchange rate, respective to the specifications
          * 
@@ -1032,7 +1072,7 @@ class AccountCenter (var currAcc: Account) {
 
         return if (totalDays > 0L) weightedBalanceSum / totalDays else lastTuple.getBall()
     }
-    
+
     /*
      * Handles the generation of report 1
      * NOTE: AI-REFINED AND ASSISTED
@@ -1040,17 +1080,11 @@ class AccountCenter (var currAcc: Account) {
      * @return NONE
      */
     fun report1() {
-        
         val groupedUsers: Map<DM_PrimaryKey, List<recordTuple>> = DataManagement.findDistinct()
-        
-        val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
-        val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
         var excpPass = false
-        
+
         try {
-            
-            FileWriter("report1_banking_privilege_tiers.csv").use { fw ->
-            fw.write("AccountName,AccountAge,CurrentBalance,AverageDailyBalance,PrivilegeTier\n")
+            val rows = mutableListOf<Report1Row>()
 
             for ((userKey, userTuples) in groupedUsers) {
                 if (userTuples.isEmpty()) continue
@@ -1058,38 +1092,51 @@ class AccountCenter (var currAcc: Account) {
                 val sortedTuples = userTuples.sortedBy { it.getTimeDate() }
                 val firstDate = sortedTuples.first().getTimeDate()
                 val lastDate = sortedTuples.last().getTimeDate()
-                val accountAgeDays = java.time.temporal.ChronoUnit.DAYS.between(firstDate, lastDate)
+                val accountAgeDays = ChronoUnit.DAYS.between(firstDate, lastDate)
 
                 val currentBal = sortedTuples.last().getBall()
                 val adb = calcADB(sortedTuples)
-                
-                var privTier: String
-                
-                if (adb < 500000.0) {
-                    privTier = "Silver"
-                } else if (adb < 1000000.0) {
-                    privTier = "Gold"
-                } else
-                    privTier = "Platinum"
 
-                fw.write(
-                    "${userKey.getAName()},$accountAgeDays,${"%.2f".format(currentBal)},${"%.2f".format(adb)},$privTier\n"
+                val privTier = when {
+                    adb < 500000.0 -> "Silver"
+                    adb < 1000000.0 -> "Gold"
+                    else -> "Platinum"
+                }
+
+                rows.add(
+                    Report1Row(
+                        accountName = userKey.getAName(),
+                        accountAgeDays = accountAgeDays,
+                        currentBalance = currentBal,
+                        adb = adb,
+                        privilegeTier = privTier
+                    )
                 )
             }
-        }
-           
+
+            val sortedRows = rows.sortedByDescending { it.adb }
+
+            FileWriter("report1_banking_privilege_tiers.csv").use { fw ->
+                fw.write("AccountName,AccountAge,CurrentBalance,AverageDailyBalance,PrivilegeTier\n")
+                for (r in sortedRows) {
+                    fw.write(
+                        "${r.accountName},${r.accountAgeDays},${"%.2f".format(r.currentBalance)},${"%.2f".format(r.adb)},${r.privilegeTier}\n"
+                    )
+                }
+            }
+
+            excpPass = true
         } catch (e: Exception) {
-            
-            System.out.println("Warning: File cannot be written!")
-            System.out.println("Generation of Report Unsuccesful")
+            e.printStackTrace()
+            println("Warning: File cannot be written!")
+            println("Generation of Report Unsuccesful")
         }
-        
+
         if (excpPass == false) {
             return
         }
-        
-    }
-    
+    }   
+
     /*
      * Handles the generation of report 2
      * NOTE: AI-REFINED AND ASSISTED
@@ -1097,17 +1144,11 @@ class AccountCenter (var currAcc: Account) {
      * @return NONE
      */
     fun report2() {
-        
-        val groupedUsers: Map<DM_PrimaryKey, List<recordTuple>> = DataManagement.findDistinct()
-        
-        val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
-        val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    val groupedUsers: Map<DM_PrimaryKey, List<recordTuple>> = DataManagement.findDistinct()
         var excpPass = false
-        
+
         try {
-            
-            FileWriter("report2_interest_expense_projection.csv").use { fw ->
-            fw.write("AccountName,CurrentBalance,ExpectedInterest\n")
+            val rows = mutableListOf<Report2Row>()
 
             for ((userKey, userTuples) in groupedUsers) {
                 if (userTuples.isEmpty()) continue
@@ -1120,7 +1161,6 @@ class AccountCenter (var currAcc: Account) {
                 var dailyInterest: Double
                 var ctr = 1
 
-                // Uses more or less the old logic from the displaying of interest in the app
                 do {
                     dailyInterest = Math.round(sumBal * (INTEREST / 365.0) * 100) / 100.0
                     sumBal = Math.round((sumBal + dailyInterest) * 100) / 100.0
@@ -1129,24 +1169,36 @@ class AccountCenter (var currAcc: Account) {
 
                 val interestEarned30Days = sumBal - startBal
 
-                fw.write(
-                    "${userKey.getAName()},${"%.2f".format(currentBal)},${"%.2f".format(interestEarned30Days)}\n"
+                rows.add(
+                    Report2Row(
+                        accountName = userKey.getAName(),
+                        currentBalance = currentBal,
+                        expectedInterest = interestEarned30Days
+                    )
                 )
             }
+
+            val sortedRows = rows.sortedByDescending { it.expectedInterest }
+
+            FileWriter("report2_interest_expense_projection.csv").use { fw ->
+                fw.write("AccountName,CurrentBalance,ExpectedInterest\n")
+                for (r in sortedRows) {
+                    fw.write(
+                        "${r.accountName},${"%.2f".format(r.currentBalance)},${"%.2f".format(r.expectedInterest)}\n"
+                    )
+                }
             }
-           
+
+            excpPass = true
         } catch (e: Exception) {
-            
-            System.out.println("Warning: File cannot be written!")
-            System.out.println("Generation of Report Unsuccesful")
+            e.printStackTrace()
+            println("Warning: File cannot be written!")
+            println("Generation of Report Unsuccesful")
         }
-        
+
         if (excpPass == false) {
             return
         }
-        
-        
-        
     }
     
     /*
@@ -1155,27 +1207,21 @@ class AccountCenter (var currAcc: Account) {
      * @return NONE
      */
     fun report3() {
-        
         val groupedUsers: Map<DM_PrimaryKey, List<recordTuple>> = DataManagement.findDistinct()
         val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
         var excpPass = false
-        
+
         try {
-            
-            FileWriter("report3_suspicious_client_behavior.csv").use { fw ->
-            fw.write("AccountName,Date,TotalWithdrawalAmounts,NumberOfDeposits,TotalDepositAmounts,RiskFlagLevel\n")
+            val rows = mutableListOf<Report3Row>()
 
             for ((userKey, userTuples) in groupedUsers) {
                 if (userTuples.isEmpty()) continue
 
-                
                 val byDay = userTuples
                     .sortedBy { it.getTimeDate() }
                     .groupBy { it.getTimeDate().toLocalDate() }
 
                 for ((day, dayTuples) in byDay) {
-                    
-                    // Logs withdrawal and deposit records within data structures
                     val totalWithdrawals = dayTuples
                         .filter { it.getType().equals("withdrawal", ignoreCase = true) }
                         .sumOf { it.getMoneyDiff() }
@@ -1183,7 +1229,6 @@ class AccountCenter (var currAcc: Account) {
                     val dayDeposits = dayTuples
                         .filter { it.getType().equals("deposit", ignoreCase = true) }
 
-                    // Number of deposits is the size of that structure
                     val numDeposits = dayDeposits.size
                     val totalDeposits = dayDeposits.sumOf { it.getMoneyDiff() }
 
@@ -1193,28 +1238,46 @@ class AccountCenter (var currAcc: Account) {
                         0.0
                     }
 
-                    // Simple branching for risk flag level assessment
                     val riskFlagLevel = if (totalWithdrawals >= 500000.0 || turnoverVelocity >= 90.0) {
                         "Suspicious"
                     } else {
                         "Normal"
                     }
 
-                    val formattedDate = day.format(formatterDay)
-
-                    fw.write(
-                        "${userKey.getAName()},$formattedDate,${"%.2f".format(totalWithdrawals)},$numDeposits,${"%.2f".format(totalDeposits)},$riskFlagLevel\n"
+                    rows.add(
+                        Report3Row(
+                            accountName = userKey.getAName(),
+                            date = day,
+                            totalWithdrawals = totalWithdrawals,
+                            numDeposits = numDeposits,
+                            totalDeposits = totalDeposits,
+                            riskFlagLevel = riskFlagLevel
+                        )
                     )
                 }
             }
-        }
-           
+
+            val sortedRows = rows.sortedWith(
+                compareBy<Report3Row> { it.date }.thenBy { it.riskFlagLevel }
+            )
+
+            FileWriter("report3_suspicious_client_behavior.csv").use { fw ->
+                fw.write("AccountName,Date,TotalWithdrawalAmounts,NumberOfDeposits,TotalDepositAmounts,RiskFlagLevel\n")
+                for (r in sortedRows) {
+                    val formattedDate = r.date.format(formatterDay)
+                    fw.write(
+                        "${r.accountName},$formattedDate,${"%.2f".format(r.totalWithdrawals)},${r.numDeposits},${"%.2f".format(r.totalDeposits)},${r.riskFlagLevel}\n"
+                    )
+                }
+            }
+
+            excpPass = true
         } catch (e: Exception) {
-            
-            System.out.println("Warning: File cannot be written!")
-            System.out.println("Generation of Report Unsuccesful")
+            e.printStackTrace()
+            println("Warning: File cannot be written!")
+            println("Generation of Report Unsuccesful")
         }
-        
+
         if (excpPass == false) {
             return
         }
@@ -1264,6 +1327,114 @@ class AccountCenter (var currAcc: Account) {
         
     }
     
+    /**
+     * A helper data class that consolidates to a json file
+     * NOTE: AI-Assisted
+     * 
+     * @return NONE
+     */
+    data class SummaryMetrics(
+        val totalUniqueAccounts: Int,
+        val absTotalDeposited: Double,
+        val absTotalWithdrawn: Double,
+        val absTotalBalance: Double,
+        val absTotalInterestExpense: Double
+    )
+    
+    /**
+     * This consolidates all banking app metrics to be ready for output
+     * NOTE: AI-Assisted
+     * 
+     * @return NONE
+     */
+    fun summary(): AccountCenter.SummaryMetrics {
+        
+        val groupedUsers: Map<DM_PrimaryKey, List<recordTuple>> = DataManagement.findDistinct()
+
+        val totalUniqueAccounts = groupedUsers.size // pseudo-groupby
+        var absTotalDeposited = 0.0
+        var absTotalWithdrawn = 0.0
+        var absTotalBalance = 0.0
+        var absTotalInterestExpense = 0.0
+
+        // Harvests total amounts of deposits and withdrawals
+        for ((_, userTuples) in groupedUsers) {
+            if (userTuples.isEmpty()) continue
+
+            val sortedTuples = userTuples.sortedBy { it.getTimeDate() }
+
+            for (tuple in sortedTuples) {
+                when {
+                    tuple.getType().equals("deposit", ignoreCase = true) -> {
+                        absTotalDeposited += kotlin.math.abs(tuple.getMoneyDiff())
+                    }
+                    tuple.getType().equals("withdrawal", ignoreCase = true) -> {
+                        absTotalWithdrawn += kotlin.math.abs(tuple.getMoneyDiff())
+                    }
+                }
+            }
+
+            // Gets sum of latest account balances 
+            val latestBal = sortedTuples.last().getBall()
+            absTotalBalance += kotlin.math.abs(latestBal)
+
+            val startBal = Math.round(latestBal * 100) / 100.0
+            var sumBal = startBal
+            var dailyInterest: Double
+            var ctr = 1
+
+            do {
+                dailyInterest = Math.round(sumBal * (INTEREST / 365.0) * 100) / 100.0
+                sumBal = Math.round((sumBal + dailyInterest) * 100) / 100.0
+                ctr++
+            } while (ctr <= 30)
+
+            absTotalInterestExpense += kotlin.math.abs(sumBal - startBal)
+        }
+
+        return SummaryMetrics(
+            totalUniqueAccounts = totalUniqueAccounts,
+            absTotalDeposited = absTotalDeposited,
+            absTotalWithdrawn = absTotalWithdrawn,
+            absTotalBalance = absTotalBalance,
+            absTotalInterestExpense = absTotalInterestExpense
+        )
+        
+    }
+    
+    /**
+     * This consolidates all banking app metrics to be ready for output
+     * NOTE: AI-Assisted
+     * 
+     * @return NONE
+     */
+    fun writeSummaryJson(filePath: String = "summary.json"): Boolean {
+        val metrics = summary()
+
+        val jsonContent = """
+            {
+            "totalUniqueAccounts": ${metrics.totalUniqueAccounts},
+            "absoluteTotalDeposited": ${"%.2f".format(Locale.US, metrics.absTotalDeposited)},
+            "absoluteTotalWithdrawn": ${"%.2f".format(Locale.US, metrics.absTotalWithdrawn)},
+            "absoluteTotalBalance": ${"%.2f".format(Locale.US, metrics.absTotalBalance)},
+            "absoluteTotalInterestExpense": ${"%.2f".format(Locale.US, metrics.absTotalInterestExpense)}
+            }
+        """.trimIndent()
+
+        return try {
+            FileWriter(filePath).use { fw ->
+                fw.write(jsonContent)
+                fw.write("\n")
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            println("Warning: File cannot be written!")
+            println("Generation of summary.json Unsuccessful")
+            false
+        }
+    }
+    
     /*
      * A helper method facilitating the outputs after generating the reports
      * 
@@ -1281,24 +1452,205 @@ class AccountCenter (var currAcc: Account) {
         println("\nGenerating reports...")
         println("Outputs saved to individual files...")
         
-        println("\nReport 1: Banking Privilege Tiers")
-        // Insert CSV rows here...
-        println("\n(Full table exported to report1_banking_privilege_tiers.csv")
+        println("\nReport 1: Banking Privilege Tiers\n")
         
-        println("\nReport 2: Interest Expense Projection")
-        // Insert CSV rows here...
-        println("\n(Full table exported to report2_interest_expense_projection.csv")
+        // Try segment is AI-Assisted
+        try {
+            
+            BufferedReader(FileReader("report1_banking_privilege_tiers.csv")).use { br ->
+            val headerLine = br.readLine()
+            if (headerLine == null) {
+                println("(Empty file)")
+                return
+            }
+
+            fun formatRow(line: String): String {
+                return line.split(",")
+                    .joinToString(" | ") { cell ->
+                        cell.trim().padEnd(18)
+                    }
+            }
+
+            val formattedHeader = formatRow(headerLine)
+            println(formattedHeader)
+            println("-".repeat(formattedHeader.length))
+
+            var printed = 0
+            while (printed < 2) {
+                val rowLine = br.readLine() ?: break
+                if (rowLine.isBlank()) continue
+                println(formatRow(rowLine))
+                printed++
+            }
+
+            if (printed == 0) {
+                println("(No data rows available)")
+            }
+        }
+           
+        } catch (e: Exception) {
+            
+            System.out.println("Warning: File cannot be read!")
+            System.out.println("File Reading Unsuccesful")
+        }
         
-        println("\nReport 3: Suspicious Client Behavior")
-        // Insert CSV rows here...
-        println("\n(Full table exported to report3_suspicious_client_behavior.csv")
         
-        println("\nReport 4: Custom Report")
-        // Insert CSV rows here...
-        println("\n(Full table exported to report4_custom_report.csv")
+        println("\n(Full table exported to report1_banking_privilege_tiers.csv)")
+        
+        println("\nReport 2: Interest Expense Projection\n")
+        
+        // Try segment is AI-Assisted
+        try {
+            
+            BufferedReader(FileReader("report2_interest_expense_projection.csv")).use { br ->
+            val headerLine = br.readLine()
+            if (headerLine == null) {
+                println("(Empty file)")
+                return
+            }
+
+            fun formatRow(line: String): String {
+                return line.split(",")
+                    .joinToString(" | ") { cell ->
+                        cell.trim().padEnd(18)
+                    }
+            }
+
+            val formattedHeader = formatRow(headerLine)
+            println(formattedHeader)
+            println("-".repeat(formattedHeader.length))
+
+            var printed = 0
+            while (printed < 2) {
+                val rowLine = br.readLine() ?: break
+                if (rowLine.isBlank()) continue
+                println(formatRow(rowLine))
+                printed++
+            }
+
+            if (printed == 0) {
+                println("(No data rows available)")
+            }
+        }
+           
+        } catch (e: Exception) {
+            
+            System.out.println("Warning: File cannot be read!")
+            System.out.println("File Reading Unsuccesful")
+        }
+            
+        println("\n(Full table exported to report2_interest_expense_projection.csv)")
+        
+        println("\nReport 3: Suspicious Client Behavior\n")
+        
+        // Try segment is AI-Assisted
+        try {
+            
+            BufferedReader(FileReader("report3_suspicious_client_behavior.csv")).use { br ->
+            val headerLine = br.readLine()
+            if (headerLine == null) {
+                println("(Empty file)")
+                return
+            }
+
+            fun formatRow(line: String): String {
+                return line.split(",")
+                    .joinToString(" | ") { cell ->
+                        cell.trim().padEnd(15)
+                    }
+            }
+
+            val formattedHeader = formatRow(headerLine)
+            println(formattedHeader)
+            println("-".repeat(formattedHeader.length))
+
+            var printed = 0
+            while (printed < 2) {
+                val rowLine = br.readLine() ?: break
+                if (rowLine.isBlank()) continue
+                println(formatRow(rowLine))
+                printed++
+            }
+
+            if (printed == 0) {
+                println("(No data rows available)")
+            }
+        }
+           
+        } catch (e: Exception) {
+            
+            System.out.println("Warning: File cannot be read!")
+            System.out.println("File Reading Unsuccesful")
+        }
+        
+        println("\n(Full table exported to report3_suspicious_client_behavior.csv)")
+        
+        println("\nReport 4: Total Number of Overseas Transactions\n")
+        
+        // Try segment is AI-Assisted
+        try {
+            
+            BufferedReader(FileReader("report4_overseas_transaction_record.csv")).use { br ->
+            val headerLine = br.readLine()
+            if (headerLine == null) {
+                println("(Empty file)")
+                return
+            }
+
+            fun formatRow(line: String): String {
+                return line.split(",")
+                    .joinToString(" | ") { cell ->
+                        cell.trim().padEnd(18)
+                    }
+            }
+
+            val formattedHeader = formatRow(headerLine)
+            println(formattedHeader)
+            println("-".repeat(formattedHeader.length))
+
+            var printed = 0
+            while (printed < 2) {
+                val rowLine = br.readLine() ?: break
+                if (rowLine.isBlank()) continue
+                println(formatRow(rowLine))
+                printed++
+            }
+
+            if (printed == 0) {
+                println("(No data rows available)")
+            }
+        }
+           
+        } catch (e: Exception) {
+            
+            System.out.println("Warning: File cannot be read!")
+            System.out.println("File Reading Unsuccesful")
+        }
+        
+        println("\n(Full table exported to report4_custom_report.csv)")
         
         println("\nSummary State (summary.json):")
-        // Insert .json display code here...
+        if (writeSummaryJson("summary.json")) {
+            try {
+                val br = BufferedReader(FileReader("summary.json"))
+                
+                var a = br.readLine()
+                var b = br.readLine()
+                var c = br.readLine()
+                var d = br.readLine()
+                var e = br.readLine()
+                
+                println(a + " " + b + " " + c + " " + d + " " + e + "}")
+                
+            } catch (e: Exception) {
+                
+                System.out.println("Warning: File cannot be read!")
+                System.out.println("File Reading Unsuccesful")
+                
+            }
+        } else {
+            println("Warning: Could not write summary.json!")
+        }
         
     }
     
@@ -1331,17 +1683,36 @@ class AccountCenter (var currAcc: Account) {
         }
         
         if (currChoice == 1) {
+            
+            if (isFileLoaded == true) {
+                println("\nWarning: Do not attempt to read the file again!")
+                return
+            }
+            
             DataManagement.readfile()
             
             var i = 0
+            
             do {
                 i++
                 DataManagement.parseRow(DataManagement.records[i])
-                print(DataManagement.records[i] + "\n")
             } while (i < DataManagement.records.size - 1);
             
+            isFileLoaded = true
+            
+            println("\nFile successfully loaded!")
+            println("\nMetrics:")
+            println("Total Rows: ${DataManagement.totalRows}")
+            println("Erroneous Rows: ${DataManagement.rowDiscrepancies}")
+            println("Non-PHP Transaction Logs: ${DataManagement.nonPHP}")
+            
         } else if (currChoice == 2) {
-            reportFlow()
+            if (isFileLoaded == true) {
+                reportFlow()
+            } else {
+                println("\nWarning: File has not yet been loaded")
+            }
+            
         }
     }
     
