@@ -439,6 +439,37 @@ class AccountCenter (var currAcc: Account) {
             rates.add(ExcRate("EUR", "Euro", 72.00))
             rates.add(ExcRate("CNY", "Chinese Yuan Renminbi", 9.00))
         }
+        
+        /**
+        * Writes to the csv file containing all logged transactions done within the system
+        * 
+        * @param update pertains to the addition or deduction to the balance, type is the transaction type, bal is the balance of the account
+        * @return a boolean value stating whether logging the transaction was successful or not
+        */
+        fun writeToFile(acc: Account, update: Double, type: String, bal: Double, currency: String): Boolean {
+            
+            val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
+            val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            
+            try {
+                
+                val fw: FileWriter = FileWriter("bank_transactions.csv", true)
+                fw.write(acc.getUsername() + "," + acc.getAccNumb() + "," + LocalDateTime.now().format(formatterDay) + "," + LocalTime.now().format(formatterTime) + "," + currency + "," + "%.2f".format(update) + "," + type + "," + "%.2f".format(bal))
+                fw.write("\n")
+            
+                fw.close()
+            
+                return true
+            
+            } catch (e: Exception) {
+                
+                System.out.println("Warning: File cannot be found!")
+                System.out.println("Logging of Transaction Unsuccesful")
+                    
+                return false
+            }
+            
+        }
     }
     
     val INTEREST = 0.05
@@ -446,37 +477,6 @@ class AccountCenter (var currAcc: Account) {
     
     // Helper Functions
     
-    
-    /**
-     * Writes to the csv file containing all logged transactions done within the system
-     * 
-     * @param update pertains to the addition or deduction to the balance, type is the transaction type, bal is the balance of the account
-     * @return a boolean value stating whether logging the transaction was successful or not
-     */
-    fun writeToFile(update: Double, type: String, bal: Double, currency: String): Boolean {
-        
-        val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
-        val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-        
-        try {
-            
-            val fw: FileWriter = FileWriter("bank_transactions.csv", true)
-            fw.write(currAcc.getUsername() + "," + currAcc.getAccNumb() + "," + LocalDateTime.now().format(formatterDay) + "," + LocalTime.now().format(formatterTime) + "," + currency + "," + "%.2f".format(update) + "," + type + "," + "%.2f".format(bal))
-            fw.write("\n")
-           
-            fw.close()
-           
-            return true
-           
-        } catch (e: Exception) {
-            
-            System.out.println("Warning: File cannot be found!")
-            System.out.println("Logging of Transaction Unsuccesful")
-                
-            return false
-        }
-        
-    }
     
     /*
      * Validates if an input is not empty
@@ -621,7 +621,7 @@ class AccountCenter (var currAcc: Account) {
             overseasTag = true
         }
         
-        writeToFile(convertedVal, "deposit", currAcc.getBal(), "PHP")
+        writeToFile(currAcc, convertedVal, "deposit", currAcc.getBal(), "PHP")
         
         if (overseasTag == true) {
             currAcc.numOfOverseasTrans++
@@ -698,7 +698,7 @@ class AccountCenter (var currAcc: Account) {
             overseasTag = true
         }
         
-        writeToFile(convertedVal, "withdrawal", currAcc.getBal(), "PHP")
+        writeToFile(currAcc, convertedVal, "withdrawal", currAcc.getBal(), "PHP")
         
         if (overseasTag == true) {
             currAcc.numOfOverseasTrans++
@@ -2037,6 +2037,8 @@ class SysControl {
             return
         } 
         
+        var temp = sc.nextLine()
+        
         if (depositIn < 5000.0) {
             println("Warning: Initial deposit is lower than minimum!")
             return
@@ -2053,6 +2055,7 @@ class SysControl {
         accounts.add(newAcc)
         
         newAcc.deposit(depositIn)
+        AccountCenter.writeToFile(newAcc, depositIn, "deposit", newAcc.getBal(), "PHP")
         println("\nSuccessfully made an initial deposit!")
 
         println("\n***")
