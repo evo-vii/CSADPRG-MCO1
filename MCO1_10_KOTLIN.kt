@@ -20,9 +20,16 @@ import java.time.format.*
 /**
  * This is the account class which acts as a template to store the user's account details
  */
-class Account (var accNum: Int, var name: String, var pin: String) {
+class Account (var accNum: Int, var name: String, var pin: String, var creaTime: LocalDateTime) {
     
     var currBal = 0.0
+    var numOfOverseasTrans: Int = 0
+    
+    var totalDeposits = 0
+    var totalWithdrawals = 0
+    
+    var accumDeposits = 0
+    var accumWithdrawal = 0
     
     companion object {
         var numAccs = 0
@@ -43,6 +50,7 @@ class Account (var accNum: Int, var name: String, var pin: String) {
      */
     fun deposit(d: Double) {
         currBal += d
+        totalDeposits++
     }
     
     /**
@@ -56,6 +64,7 @@ class Account (var accNum: Int, var name: String, var pin: String) {
             return false
         } else {
             currBal -= d 
+            totalWithdrawals++
             return true
         }
     }
@@ -105,7 +114,9 @@ class Account (var accNum: Int, var name: String, var pin: String) {
         return numAccs
     }
     
-    
+    fun getCreationTime(): LocalDateTime {
+        return creaTime
+    }
 }
 
 /**
@@ -247,18 +258,37 @@ class DataManagement() {
         val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
         val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
         
-        var listTuple: recordTuple = recordTuple("Null", 0, LocalDateTime.parse("00/00/00", formatterDay), LocalTime.parse("00:00:00", formatterTime), "PHP", 0.0, "null", 0.0 )
+        var listTuple = mutableListOf<recordTuple>()
         var records = mutableListOf("FirstString")
         
         
         fun parseRow(r: String) {
             
-            var recArr = []
+            var recSplit = r.split(",")
+            println(recSplit)
             
-            recArr.add(r.substringBefore(r.indexOf(",")))
-            println(recArr[0])
+            if (recSplit.size < 8) {
+                println("Warning! This record is incomplete!")
+                return
+            }
             
+            var name = recSplit[0]
             
+            var accNum = recSplit[1].toInt()
+            
+            var dateDMY = LocalDateTime.parse(recSplit[2], formatterDay)
+            
+            var dateHMS = LocalTime.parse(recSplit[3], formatterDay)
+            
+            var curr = recSplit[4]
+            
+            var diff = recSplit[5].toDouble()
+            
+            var type = recSplit[6]
+            
+            var bal = recSplit[7].toDouble()
+            
+            listTuple.add(recordTuple(name, accNum, dateDMY, dateHMS, curr, diff, type, bal))
         }
         
         fun readfile(): Boolean {
@@ -310,7 +340,7 @@ class AccountCenter (var currAcc: Account) {
     companion object {
         // Initializing the exchange rates
         val rates = mutableListOf(ExcRate("PHP", "Philippine Peso", 1.00))
-
+        val holding = mutableListOf<Account>()
         /**
          * Initializes the currency objects to its default exchange rate, respective to the specifications
          * 
@@ -899,6 +929,29 @@ class AccountCenter (var currAcc: Account) {
     
     
     /*
+     * Calculates average daily balance
+     * 
+     * @return NONE
+     */
+    fun calcADB(a: Account): Int {
+        
+        val JAN = 31
+        val FEB = 28
+        val MAR = 31
+        val APR = 30
+        val MAY = 31
+        val JUN = 30
+        val JUL = 31
+        val AUG = 31
+        val SEP = 30
+        val OCT = 31
+        val NOV = 30
+        val DEC = 31
+        
+        return 0
+    }
+    
+    /*
      * Handles the generation of report 1
      * 
      * @return NONE
@@ -911,7 +964,7 @@ class AccountCenter (var currAcc: Account) {
         
         try {
             
-            val fw: FileWriter = FileWriter("report1_banking_privilege_tiers.csv", true)
+            val fw: FileWriter = FileWriter("report1_banking_privilege_tiers.csv")
             fw.write("AccountName" + "," + "AccountAge" + "," + "CurrentBalance" + "," + "AverageDailyBalance" + "," + "PrivilegeTier")
             fw.write("\n")
            
@@ -929,6 +982,26 @@ class AccountCenter (var currAcc: Account) {
             return
         }
         
+        var i = 0
+        val fw: FileWriter = FileWriter("report1_banking_privilege_tiers.csv", true)
+        
+        while (i < SysControl.accounts.size) {
+            
+            if (calcADB() < 500000) {
+                var privTier = "Silver"
+            } else if (calcADB() < 1000000) {
+                var privTier = "Gold"
+            } else {
+                var privTier = "Platinum"
+            }
+            
+            //fw.write(SysControl.accounts.get(i).getUsername() + "," + SysControl.accounts.get(i).numOfOverseasTrans)
+            fw.write("\n")
+            i++
+        }
+        
+        fw.close()
+        
     }
     
     /*
@@ -937,6 +1010,53 @@ class AccountCenter (var currAcc: Account) {
      * @return NONE
      */
     fun report2() {
+        
+        val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
+        val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        var excpPass = false
+        
+        try {
+            
+            val fw: FileWriter = FileWriter("report2_interest_expense_projection.csv")
+            fw.write("AccountName" + "," +  "CurrentBalance" + "," + "ExpectedInterest")
+            fw.write("\n")
+           
+            excpPass = true
+            
+            fw.close()
+           
+        } catch (e: Exception) {
+            
+            System.out.println("Warning: File cannot be written!")
+            System.out.println("Generation of Report Unsuccesful")
+        }
+        
+        if (excpPass == false) {
+            return
+        }
+        
+        var i = 0
+        val fw: FileWriter = FileWriter("report2_interest_expense_projection.csv", true)
+        
+        while (i < SysControl.accounts.size) {
+            
+            var sumBal = Math.round(SysControl.accounts.get(i).getBal()*100)/100.0
+            var dailyInterest = 0.0
+            var ctr = 1
+
+            do {
+                dailyInterest = Math.round(sumBal*(INTEREST/365)*100)/100.0
+                sumBal = Math.round((sumBal + dailyInterest)*100)/100.0
+                println("%-5d".format(ctr) + " | %-14.2f".format(dailyInterest) + " | %-16.2f".format(sumBal) + " |")
+                ctr++
+            } while (ctr <= 30)
+            
+            fw.write(SysControl.accounts.get(i).getUsername() + "," + SysControl.accounts.get(i).getBal() + "," + "%.2f".format(sumBal - SysControl.accounts.get(i).getBal()))
+            fw.write("\n")
+            i++
+        }
+        
+        fw.close()
         
     }
     
@@ -947,6 +1067,41 @@ class AccountCenter (var currAcc: Account) {
      */
     fun report3() {
         
+        val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
+        val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        var excpPass = false
+        
+        try {
+            
+            val fw: FileWriter = FileWriter("report3_suspicious_client_behavior.csv")
+            fw.write("AccountName" + "," + "Date" + "," + "TotalWithdrawalAmounts" + "," + "NumberOfDeposits" + "," + "TotalDepositAmounts" + "," + "TurnoverVelocity" + "RiskFlagLevel")
+            fw.write("\n")
+           
+            excpPass = true
+            
+            fw.close()
+           
+        } catch (e: Exception) {
+            
+            System.out.println("Warning: File cannot be written!")
+            System.out.println("Generation of Report Unsuccesful")
+        }
+        
+        if (excpPass == false) {
+            return
+        }
+        
+        var i = 0
+        val fw: FileWriter = FileWriter("report3_suspicious_client_behavior.csv", true)
+        
+        while (i < SysControl.accounts.size) {
+            //fw.write(SysControl.accounts.get(i).getUsername() + "," + SysControl.accounts.get(i).numOfOverseasTrans)
+            fw.write("\n")
+            i++
+        }
+        
+        fw.close()
+        
     }
     
     /*
@@ -955,6 +1110,41 @@ class AccountCenter (var currAcc: Account) {
      * @return NONE
      */
     fun report4() {
+        
+        val formatterTime = DateTimeFormatter.ofPattern("HH:mm:ss")
+        val formatterDay = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        var excpPass = false
+        
+        try {
+            
+            val fw: FileWriter = FileWriter("report4_overseas_transaction_record.csv")
+            fw.write("AccountName" + "," + "NumberOfOverseasTransactions")
+            fw.write("\n")
+           
+            excpPass = true
+            
+            fw.close()
+           
+        } catch (e: Exception) {
+            
+            System.out.println("Warning: File cannot be written!")
+            System.out.println("Generation of Report Unsuccesful")
+        }
+        
+        if (excpPass == false) {
+            return
+        }
+        
+        var i = 0
+        val fw: FileWriter = FileWriter("report4_overseas_transaction_record.csv", true)
+        
+        while (i < SysControl.accounts.size) {
+            fw.write(SysControl.accounts.get(i).getUsername() + "," + SysControl.accounts.get(i).numOfOverseasTrans)
+            fw.write("\n")
+            i++
+        }
+        
+        fw.close()
         
     }
     
@@ -968,9 +1158,9 @@ class AccountCenter (var currAcc: Account) {
         // Generate Reports first
         
         // report1()
-        // report2()
+        report2()
         // report3()
-        // report4()
+        report4()
         
         println("\nGenerating reports...")
         println("Outputs saved to individual files...")
@@ -1157,11 +1347,23 @@ class SysControl {
         val ADMIN_NAME = "admin"
         val ADMIN_PASS = "2580"
     
-        val ADMIN_ACC = Account(1000000000, ADMIN_NAME, ADMIN_PASS)
+        val ADMIN_ACC = Account(1000000000, ADMIN_NAME, ADMIN_PASS, LocalDateTime.now())
         var accounts = mutableListOf(ADMIN_ACC)
         
         // Retrieves an account within the list given an index (n)
         fun getAccList(n: Int): Account = accounts.get(n)
+        
+        /*
+        * Searches if a user account exists within the list of accounts
+        *
+        * @param input is the account number of the account
+        * @return the index of the account
+        */
+        fun searchUser(input: Int): Int {
+
+            return accounts.indexOfFirst { it.getAccNumb() == input }
+
+        }
         
     }
     
@@ -1203,17 +1405,7 @@ class SysControl {
         return input
     }
 
-    /*
-     * Searches if a user account exists within the list of accounts
-     *
-     * @param input is the account number of the account
-     * @return the index of the account
-     */
-    fun searchUser(input: Int): Int {
-
-        return accounts.indexOfFirst { it.getAccNumb() == input }
-
-    }
+    
 
     /**
     * Removes an account from the accounts mutable list, representing the registered users on the application
@@ -1319,7 +1511,7 @@ class SysControl {
         
         var pin4 = pinInput
         
-        val newAcc = Account(1000000000 + Account.numAccs, nAccName, pin4)
+        val newAcc = Account(1000000000 + Account.numAccs, nAccName, pin4, LocalDateTime.now())
         accounts.add(newAcc)
         
         print("\nInitial Deposit (min. Php 5000, This is a required field): ")
