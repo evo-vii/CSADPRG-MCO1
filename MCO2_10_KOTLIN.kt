@@ -2024,15 +2024,6 @@ class SysControl {
         }
         
         var pin4 = pinInput
-        var newAcc: Account
-        
-        if (DataManagement.listTuple.size == 0) {
-            newAcc = Account(1000000000 + Account.numAccs, nAccName, pin4, LocalDateTime.now())
-        } else {
-            newAcc = Account(getNewAccNumber(), nAccName, pin4, LocalDateTime.now())
-        }
-        
-        accounts.add(newAcc)
         
         print("\nInitial Deposit (min. Php 5000, This is a required field): ")
         
@@ -2049,10 +2040,20 @@ class SysControl {
         if (depositIn < 5000.0) {
             println("Warning: Initial deposit is lower than minimum!")
             return
+        } 
+        
+        var newAcc: Account
+        
+        if (DataManagement.listTuple.size == 0) {
+            newAcc = Account(1000000000 + Account.numAccs, nAccName, pin4, LocalDateTime.now())
         } else {
-            newAcc.deposit(depositIn)
-            println("\nSuccessfully made an initial deposit!")
+            newAcc = Account(getNewAccNumber(), nAccName, pin4, LocalDateTime.now())
         }
+        
+        accounts.add(newAcc)
+        
+        newAcc.deposit(depositIn)
+        println("\nSuccessfully made an initial deposit!")
 
         println("\n***")
         println("Account under \"$nAccName\" successfully created!")
