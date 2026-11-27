@@ -428,6 +428,14 @@ class AccountCenter (var currAcc: Account) {
         var isFileLoaded = false
         
         /**
+         * Formats a number with thousands separators and 2 decimals (ex. 1,234,567.89)
+         * 
+         * @param d is the amount to format
+         * @return the formatted string
+         */
+        fun money(d: Double): String = "%,.2f".format(Locale.US, d)
+        
+        /**
          * Initializes the currency objects to its default exchange rate, respective to the specifications
          * 
          * @return NONE
@@ -1120,7 +1128,7 @@ class AccountCenter (var currAcc: Account) {
                 fw.write("AccountName,AccountAge,CurrentBalance,AverageDailyBalance,PrivilegeTier\n")
                 for (r in sortedRows) {
                     fw.write(
-                        "${r.accountName},${r.accountAgeDays},${"%.2f".format(r.currentBalance)},${"%.2f".format(r.adb)},${r.privilegeTier}\n"
+                        "${r.accountName},${r.accountAgeDays},\"${money(r.currentBalance)}\",\"${money(r.adb)}\",${r.privilegeTier}\n"
                     )
                 }
             }
@@ -1184,7 +1192,7 @@ class AccountCenter (var currAcc: Account) {
                 fw.write("AccountName,CurrentBalance,ExpectedInterest\n")
                 for (r in sortedRows) {
                     fw.write(
-                        "${r.accountName},${"%.2f".format(r.currentBalance)},${"%.2f".format(r.expectedInterest)}\n"
+                        "${r.accountName},\"${money(r.currentBalance)}\",\"${money(r.expectedInterest)}\"\n"
                     )
                 }
             }
@@ -1266,7 +1274,7 @@ class AccountCenter (var currAcc: Account) {
                 for (r in sortedRows) {
                     val formattedDate = r.date.format(formatterDay)
                     fw.write(
-                        "${r.accountName},$formattedDate,${"%.2f".format(r.totalWithdrawals)},${r.numDeposits},${"%.2f".format(r.totalDeposits)},${r.riskFlagLevel}\n"
+                        "${r.accountName},$formattedDate,\"${money(r.totalWithdrawals)}\",${r.numDeposits},\"${money(r.totalDeposits)}\",${r.riskFlagLevel}\n"
                     )
                 }
             }
@@ -1414,10 +1422,10 @@ class AccountCenter (var currAcc: Account) {
         val jsonContent = """
             {
             "totalUniqueAccounts": ${metrics.totalUniqueAccounts},
-            "absoluteTotalDeposited": ${"%.2f".format(Locale.US, metrics.absTotalDeposited)},
-            "absoluteTotalWithdrawn": ${"%.2f".format(Locale.US, metrics.absTotalWithdrawn)},
-            "absoluteTotalBalance": ${"%.2f".format(Locale.US, metrics.absTotalBalance)},
-            "absoluteTotalInterestExpense": ${"%.2f".format(Locale.US, metrics.absTotalInterestExpense)}
+            "absoluteTotalDeposited": "${money(metrics.absTotalDeposited)}",
+            "absoluteTotalWithdrawn": "${money(metrics.absTotalWithdrawn)}",
+            "absoluteTotalBalance": "${money(metrics.absTotalBalance)}",
+            "absoluteTotalInterestExpense": "${money(metrics.absTotalInterestExpense)}"
             }
         """.trimIndent()
 
@@ -1465,9 +1473,9 @@ class AccountCenter (var currAcc: Account) {
             }
 
             fun formatRow(line: String): String {
-                return line.split(",")
+                return line.split(Regex(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"))
                     .joinToString(" | ") { cell ->
-                        cell.trim().padEnd(18)
+                        cell.trim().trim('"').padEnd(18)
                     }
             }
 
@@ -1510,9 +1518,9 @@ class AccountCenter (var currAcc: Account) {
             }
 
             fun formatRow(line: String): String {
-                return line.split(",")
+                return line.split(Regex(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"))
                     .joinToString(" | ") { cell ->
-                        cell.trim().padEnd(18)
+                        cell.trim().trim('"').padEnd(18)
                     }
             }
 
@@ -1554,9 +1562,9 @@ class AccountCenter (var currAcc: Account) {
             }
 
             fun formatRow(line: String): String {
-                return line.split(",")
+                return line.split(Regex(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"))
                     .joinToString(" | ") { cell ->
-                        cell.trim().padEnd(15)
+                        cell.trim().trim('"').padEnd(15)
                     }
             }
 
@@ -1598,9 +1606,9 @@ class AccountCenter (var currAcc: Account) {
             }
 
             fun formatRow(line: String): String {
-                return line.split(",")
+                return line.split(Regex(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"))
                     .joinToString(" | ") { cell ->
-                        cell.trim().padEnd(18)
+                        cell.trim().trim('"').padEnd(18)
                     }
             }
 
