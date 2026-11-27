@@ -588,7 +588,7 @@ generate_summary_json <- function(df, report2_df, filename = "summary.json") {
   return(json_str)
 }
 
-# Prints a 2-row console preview of a generated report
+# Prints a formatted 2-row pipe-separated console preview of a generated report
 # @param title String report title
 # @param df Formatted report data frame
 # @param filename String exported CSV filename
@@ -599,7 +599,23 @@ preview_report <- function(title, df, filename) {
   if (nrow(df) == 0) {
     cat("(No matching records)\n")
   } else {
-    print(head(df, 2), row.names = FALSE)
+    top_df <- head(df, 2)
+    col_names <- names(top_df)
+    widths <- integer(length(col_names))
+
+    for (j in seq_along(col_names)) {
+      vals <- trimws(as.character(top_df[[j]]))
+      widths[j] <- max(nchar(col_names[j]), nchar(vals))
+    }
+
+    header_cells <- mapply(function(name, w) sprintf("%-*s", w, name), col_names, widths)
+    cat(paste(header_cells, collapse = " | "), "\n", sep = "")
+
+    for (i in seq_len(nrow(top_df))) {
+      row_vals <- trimws(as.character(unlist(top_df[i, ])))
+      row_cells <- mapply(function(val, w) sprintf("%-*s", w, val), row_vals, widths)
+      cat(paste(row_cells, collapse = " | "), "\n", sep = "")
+    }
   }
   cat(sprintf("(Full table exported to %s)\n", filename))
 }
@@ -794,10 +810,11 @@ show_interest_amount <- function(transactions_df, rates_acc) {
 
 # UI handler for the Generate Reports submenu (Load file, Generate reports, or Back)
 # @param transactions_df Cleaned transactions data frame (or NULL)
+# @param is_loaded Logical indicating whether [1] Load the file has been run
 # @param file_path String path to the CSV file
-# @return List containing updated transactions data frame and ask_continue flag
+# @return List containing updated transactions data frame, is_loaded flag, and ask_continue flag
 # @pre none
-generate_reports_menu <- function(transactions_df, file_path = CSV_FILE) {
+generate_reports_menu <- function(transactions_df, is_loaded = FALSE, file_path = CSV_FILE) {
   repeat {
     cat("Generate Reports\n")
     cat("[1] Load the file\n")
@@ -811,14 +828,15 @@ generate_reports_menu <- function(transactions_df, file_path = CSV_FILE) {
         cat(sprintf("Error: %s\n\n", res$error))
       } else {
         transactions_df <- res$data
+        is_loaded <- TRUE
         cat(sprintf("Processing dataset... (%s rows loaded, %s filtered for PHP currency, %d invalid rows skipped)\n\n",
                     format(res$stats$total_rows, big.mark = ","),
                     format(res$stats$php_rows, big.mark = ","),
                     res$stats$invalid_rows))
       }
     } else if (sub_choice == 2) {
-      if (is.null(transactions_df) || nrow(transactions_df) == 0) {
-        cat("Dataset not loaded yet! Please select [1] Load the file first.\n\n")
+      if (!is_loaded || is.null(transactions_df) || nrow(transactions_df) == 0) {
+        cat("Dataset not loaded or needs reload! Please select [1] Load the file first.\n\n")
         next
       }
 
@@ -853,9 +871,9 @@ generate_reports_menu <- function(transactions_df, file_path = CSV_FILE) {
 
       cat("\nSummary State (summary.json):\n")
       cat(json_str, "\n\n")
-      return(list(data = transactions_df, ask_continue = TRUE))
+      return(list(data = transactions_df, is_loaded = is_loaded, ask_continue = TRUE))
     } else {
-      return(list(data = transactions_df, ask_continue = FALSE))
+      return(list(data = transactions_df, is_loaded = is_loaded, ask_continue = FALSE))
     }
   }
 }
@@ -863,6 +881,7 @@ generate_reports_menu <- function(transactions_df, file_path = CSV_FILE) {
 # MAIN
 init_res <- load_transactions(CSV_FILE)
 transactions_df <- if (init_res$success) init_res$data else NULL
+reports_loaded <- FALSE
 rates_acc <- new_bank_account()
 is_running <- TRUE
 
@@ -871,6 +890,7 @@ while (is_running) {
   choice <- get_valid_choice(1, 7)
   cat("\n")
 
+  prev_rows <- if (is.null(transactions_df)) 0 else nrow(transactions_df)
   ask_continue <- (choice != 4)
   switch(as.character(choice),
     "1" = { transactions_df <- register_account(transactions_df, CSV_FILE) },
@@ -880,11 +900,17 @@ while (is_running) {
     "5" = { rates_acc <- record_exchange_rates(rates_acc) },
     "6" = { show_interest_amount(transactions_df, rates_acc) },
     "7" = {
-      res <- generate_reports_menu(transactions_df, CSV_FILE)
+      res <- generate_reports_menu(transactions_df, reports_loaded, CSV_FILE)
       transactions_df <- res$data
+      reports_loaded <- res$is_loaded
       ask_continue <- res$ask_continue
     }
   )
+
+  curr_rows <- if (is.null(transactions_df)) 0 else nrow(transactions_df)
+  if (curr_rows != prev_rows) {
+    reports_loaded <- FALSE
+  }
 
   if (ask_continue && !ask_yes_no("Back to the Main Menu (Y/N): ")) {
     cat("Exiting The Program!\n")
