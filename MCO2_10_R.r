@@ -234,7 +234,17 @@ load_transactions <- function(file_path = CSV_FILE) {
   raw_df <- read.csv(file_path, stringsAsFactors = FALSE, na.strings = c("", "NA"))
   total_rows <- nrow(raw_df)
 
-  raw_df$date            <- as.Date(trimws(raw_df$date), format = "%d/%m/%Y")
+  required_cols <- c("account_name", "account_number", "date", "time",
+                     "currency", "amount", "type", "current_balance")
+  if (total_rows == 0 || !all(required_cols %in% names(raw_df))) {
+    return(list(success = FALSE, data = NULL, stats = NULL,
+                error = "CSV is empty or missing required columns."))
+  }
+
+  raw_date_str <- trimws(raw_df$date)
+  raw_time_str <- trimws(raw_df$time)
+  raw_df$date            <- as.Date(raw_date_str, format = "%d/%m/%Y")
+  raw_df$datetime        <- as.POSIXct(paste(raw_date_str, raw_time_str), format = "%d/%m/%Y %H:%M:%S")
   raw_df$amount          <- suppressWarnings(as.numeric(raw_df$amount))
   raw_df$current_balance <- suppressWarnings(as.numeric(raw_df$current_balance))
   raw_df$account_number  <- suppressWarnings(as.numeric(raw_df$account_number))
@@ -244,7 +254,7 @@ load_transactions <- function(file_path = CSV_FILE) {
   is_valid_row <- !is.na(raw_df$account_name) &
                   !is.na(raw_df$account_number) &
                   !is.na(raw_df$date) &
-                  !is.na(raw_df$time) &
+                  !is.na(raw_df$datetime) &
                   !is.na(raw_df$currency) &
                   !is.na(raw_df$amount) & raw_df$amount > 0 &
                   !is.na(raw_df$type) & raw_df$type %in% c("deposit", "withdrawal") &
@@ -284,7 +294,7 @@ find_account <- function(df, query, exchange_rates) {
                 sprintf("%.0f", df$account_number) == q_clean, ]
   if (nrow(matches) == 0) return(NULL)
 
-  matches <- matches[order(matches$date, matches$time), ]
+  matches <- matches[order(matches$datetime), ]
   latest <- matches[nrow(matches), ]
 
   return(new_bank_account(
@@ -305,8 +315,9 @@ find_account <- function(df, query, exchange_rates) {
 # @return Updated transactions data frame including the new row
 # @pre amount > 0, type is 'deposit' or 'withdrawal'
 save_transaction_to_csv <- function(df, account, type, amount, file_path = CSV_FILE) {
-  now_date <- Sys.Date()
-  now_time <- format(Sys.time(), "%H:%M:%S")
+  now_posix <- Sys.time()
+  now_date <- as.Date(now_posix)
+  now_time <- format(now_posix, "%H:%M:%S")
   date_str <- format(now_date, "%d/%m/%Y")
 
   csv_line <- sprintf(
@@ -325,6 +336,7 @@ save_transaction_to_csv <- function(df, account, type, amount, file_path = CSV_F
     amount = amount,
     type = type,
     current_balance = account$balance,
+    datetime = now_posix,
     stringsAsFactors = FALSE
   )
   if (is.null(df)) return(new_row)
@@ -347,7 +359,7 @@ generate_report1 <- function(df) {
 
   for (acc_num in acc_nums) {
     acc_df <- df[df$account_number == acc_num, ]
-    acc_df <- acc_df[order(acc_df$date, acc_df$time), ]
+    acc_df <- acc_df[order(acc_df$datetime), ]
 
     acc_name <- acc_df$account_name[nrow(acc_df)]
     open_date <- min(acc_df$date)
@@ -396,7 +408,7 @@ generate_report2 <- function(df) {
 
   for (acc_num in acc_nums) {
     acc_df <- df[df$account_number == acc_num, ]
-    acc_df <- acc_df[order(acc_df$date, acc_df$time), ]
+    acc_df <- acc_df[order(acc_df$datetime), ]
     acc_name <- acc_df$account_name[nrow(acc_df)]
     current_balance <- acc_df$current_balance[nrow(acc_df)]
 
@@ -574,7 +586,7 @@ generate_summary_json <- function(df, report2_df, filename = "summary.json") {
   latest_balances <- numeric(total_accounts)
   for (i in seq_along(acc_nums)) {
     acc_df <- df[df$account_number == acc_nums[i], ]
-    acc_df <- acc_df[order(acc_df$date, acc_df$time), ]
+    acc_df <- acc_df[order(acc_df$datetime), ]
     latest_balances[i] <- acc_df$current_balance[nrow(acc_df)]
   }
   total_balance <- round(sum(latest_balances), 2)
