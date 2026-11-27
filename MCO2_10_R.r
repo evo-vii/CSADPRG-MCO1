@@ -234,7 +234,17 @@ load_transactions <- function(file_path = CSV_FILE) {
   raw_df <- read.csv(file_path, stringsAsFactors = FALSE, na.strings = c("", "NA"))
   total_rows <- nrow(raw_df)
 
-  raw_df$date            <- as.Date(trimws(raw_df$date), format = "%d/%m/%Y")
+  required_cols <- c("account_name", "account_number", "date", "time",
+                     "currency", "amount", "type", "current_balance")
+  if (total_rows == 0 || !all(required_cols %in% names(raw_df))) {
+    return(list(success = FALSE, data = NULL, stats = NULL,
+                error = "CSV is empty or missing required columns."))
+  }
+
+  raw_date_str <- trimws(raw_df$date)
+  raw_time_str <- trimws(raw_df$time)
+  raw_df$date            <- as.Date(raw_date_str, format = "%d/%m/%Y")
+  raw_df$datetime        <- as.POSIXct(paste(raw_date_str, raw_time_str), format = "%d/%m/%Y %H:%M:%S")
   raw_df$amount          <- suppressWarnings(as.numeric(raw_df$amount))
   raw_df$current_balance <- suppressWarnings(as.numeric(raw_df$current_balance))
   raw_df$account_number  <- suppressWarnings(as.numeric(raw_df$account_number))
@@ -244,7 +254,7 @@ load_transactions <- function(file_path = CSV_FILE) {
   is_valid_row <- !is.na(raw_df$account_name) &
                   !is.na(raw_df$account_number) &
                   !is.na(raw_df$date) &
-                  !is.na(raw_df$time) &
+                  !is.na(raw_df$datetime) &
                   !is.na(raw_df$currency) &
                   !is.na(raw_df$amount) & raw_df$amount > 0 &
                   !is.na(raw_df$type) & raw_df$type %in% c("deposit", "withdrawal") &
@@ -284,7 +294,7 @@ find_account <- function(df, query, exchange_rates) {
                 sprintf("%.0f", df$account_number) == q_clean, ]
   if (nrow(matches) == 0) return(NULL)
 
-  matches <- matches[order(matches$date, matches$time), ]
+  matches <- matches[order(matches$datetime), ]
   latest <- matches[nrow(matches), ]
 
   return(new_bank_account(
@@ -305,8 +315,9 @@ find_account <- function(df, query, exchange_rates) {
 # @return Updated transactions data frame including the new row
 # @pre amount > 0, type is 'deposit' or 'withdrawal'
 save_transaction_to_csv <- function(df, account, type, amount, file_path = CSV_FILE) {
-  now_date <- Sys.Date()
-  now_time <- format(Sys.time(), "%H:%M:%S")
+  now_posix <- Sys.time()
+  now_date <- as.Date(now_posix)
+  now_time <- format(now_posix, "%H:%M:%S")
   date_str <- format(now_date, "%d/%m/%Y")
 
   csv_line <- sprintf(
@@ -325,6 +336,7 @@ save_transaction_to_csv <- function(df, account, type, amount, file_path = CSV_F
     amount = amount,
     type = type,
     current_balance = account$balance,
+    datetime = now_posix,
     stringsAsFactors = FALSE
   )
   if (is.null(df)) return(new_row)
@@ -347,7 +359,7 @@ generate_report1 <- function(df) {
 
   for (acc_num in acc_nums) {
     acc_df <- df[df$account_number == acc_num, ]
-    acc_df <- acc_df[order(acc_df$date, acc_df$time), ]
+    acc_df <- acc_df[order(acc_df$datetime), ]
 
     acc_name <- acc_df$account_name[nrow(acc_df)]
     open_date <- min(acc_df$date)
@@ -396,7 +408,7 @@ generate_report2 <- function(df) {
 
   for (acc_num in acc_nums) {
     acc_df <- df[df$account_number == acc_num, ]
-    acc_df <- acc_df[order(acc_df$date, acc_df$time), ]
+    acc_df <- acc_df[order(acc_df$datetime), ]
     acc_name <- acc_df$account_name[nrow(acc_df)]
     current_balance <- acc_df$current_balance[nrow(acc_df)]
 
@@ -574,7 +586,7 @@ generate_summary_json <- function(df, report2_df, filename = "summary.json") {
   latest_balances <- numeric(total_accounts)
   for (i in seq_along(acc_nums)) {
     acc_df <- df[df$account_number == acc_nums[i], ]
-    acc_df <- acc_df[order(acc_df$date, acc_df$time), ]
+    acc_df <- acc_df[order(acc_df$datetime), ]
     latest_balances[i] <- acc_df$current_balance[nrow(acc_df)]
   }
   total_balance <- round(sum(latest_balances), 2)
@@ -588,7 +600,7 @@ generate_summary_json <- function(df, report2_df, filename = "summary.json") {
   return(json_str)
 }
 
-# Prints a 2-row console preview of a generated report
+# Prints a formatted 2-row pipe-separated console preview of a generated report
 # @param title String report title
 # @param df Formatted report data frame
 # @param filename String exported CSV filename
@@ -599,7 +611,23 @@ preview_report <- function(title, df, filename) {
   if (nrow(df) == 0) {
     cat("(No matching records)\n")
   } else {
-    print(head(df, 2), row.names = FALSE)
+    top_df <- head(df, 2)
+    col_names <- names(top_df)
+    widths <- integer(length(col_names))
+
+    for (j in seq_along(col_names)) {
+      vals <- trimws(as.character(top_df[[j]]))
+      widths[j] <- max(nchar(col_names[j]), nchar(vals))
+    }
+
+    header_cells <- mapply(function(name, w) sprintf("%-*s", w, name), col_names, widths)
+    cat(paste(header_cells, collapse = " | "), "\n", sep = "")
+
+    for (i in seq_len(nrow(top_df))) {
+      row_vals <- trimws(as.character(unlist(top_df[i, ])))
+      row_cells <- mapply(function(val, w) sprintf("%-*s", w, val), row_vals, widths)
+      cat(paste(row_cells, collapse = " | "), "\n", sep = "")
+    }
   }
   cat(sprintf("(Full table exported to %s)\n", filename))
 }
@@ -792,17 +820,19 @@ show_interest_amount <- function(transactions_df, rates_acc) {
   cat("\n")
 }
 
-# UI handler for the Generate Reports submenu (Load file & Generate CSV/JSON reports)
+# UI handler for the Generate Reports submenu (Load file, Generate reports, or Back)
 # @param transactions_df Cleaned transactions data frame (or NULL)
+# @param is_loaded Logical indicating whether [1] Load the file has been run
 # @param file_path String path to the CSV file
-# @return Updated (or reloaded) transactions data frame
+# @return List containing updated transactions data frame, is_loaded flag, and ask_continue flag
 # @pre none
-generate_reports_menu <- function(transactions_df, file_path = CSV_FILE) {
+generate_reports_menu <- function(transactions_df, is_loaded = FALSE, file_path = CSV_FILE) {
   repeat {
     cat("Generate Reports\n")
     cat("[1] Load the file\n")
     cat("[2] Generate Reports\n")
-    sub_choice <- get_valid_choice(1, 2, prompt = "Enter choice: ")
+    cat("[3] Back to Main Menu\n")
+    sub_choice <- get_valid_choice(1, 3, prompt = "Enter choice: ")
 
     if (sub_choice == 1) {
       res <- load_transactions(file_path)
@@ -810,14 +840,15 @@ generate_reports_menu <- function(transactions_df, file_path = CSV_FILE) {
         cat(sprintf("Error: %s\n\n", res$error))
       } else {
         transactions_df <- res$data
+        is_loaded <- TRUE
         cat(sprintf("Processing dataset... (%s rows loaded, %s filtered for PHP currency, %d invalid rows skipped)\n\n",
                     format(res$stats$total_rows, big.mark = ","),
                     format(res$stats$php_rows, big.mark = ","),
                     res$stats$invalid_rows))
       }
-    } else {
-      if (is.null(transactions_df) || nrow(transactions_df) == 0) {
-        cat("Dataset not loaded yet! Please select [1] Load the file first.\n\n")
+    } else if (sub_choice == 2) {
+      if (!is_loaded || is.null(transactions_df) || nrow(transactions_df) == 0) {
+        cat("Dataset not loaded or needs reload! Please select [1] Load the file first.\n\n")
         next
       }
 
@@ -852,15 +883,17 @@ generate_reports_menu <- function(transactions_df, file_path = CSV_FILE) {
 
       cat("\nSummary State (summary.json):\n")
       cat(json_str, "\n\n")
-      break
+      return(list(data = transactions_df, is_loaded = is_loaded, ask_continue = TRUE))
+    } else {
+      return(list(data = transactions_df, is_loaded = is_loaded, ask_continue = FALSE))
     }
   }
-  return(transactions_df)
 }
 
 # MAIN
 init_res <- load_transactions(CSV_FILE)
 transactions_df <- if (init_res$success) init_res$data else NULL
+reports_loaded <- FALSE
 rates_acc <- new_bank_account()
 is_running <- TRUE
 
@@ -869,6 +902,8 @@ while (is_running) {
   choice <- get_valid_choice(1, 7)
   cat("\n")
 
+  prev_rows <- if (is.null(transactions_df)) 0 else nrow(transactions_df)
+  ask_continue <- (choice != 4)
   switch(as.character(choice),
     "1" = { transactions_df <- register_account(transactions_df, CSV_FILE) },
     "2" = { transactions_df <- deposit_amount(transactions_df, rates_acc, CSV_FILE) },
@@ -876,10 +911,20 @@ while (is_running) {
     "4" = { rates_acc <- currency_exchange(rates_acc) },
     "5" = { rates_acc <- record_exchange_rates(rates_acc) },
     "6" = { show_interest_amount(transactions_df, rates_acc) },
-    "7" = { transactions_df <- generate_reports_menu(transactions_df, CSV_FILE) }
+    "7" = {
+      res <- generate_reports_menu(transactions_df, reports_loaded, CSV_FILE)
+      transactions_df <- res$data
+      reports_loaded <- res$is_loaded
+      ask_continue <- res$ask_continue
+    }
   )
 
-  if (choice != 4 && !ask_yes_no("Back to the Main Menu (Y/N): ")) {
+  curr_rows <- if (is.null(transactions_df)) 0 else nrow(transactions_df)
+  if (curr_rows != prev_rows) {
+    reports_loaded <- FALSE
+  }
+
+  if (ask_continue && !ask_yes_no("Back to the Main Menu (Y/N): ")) {
     cat("Exiting The Program!\n")
     is_running <- FALSE
   }
